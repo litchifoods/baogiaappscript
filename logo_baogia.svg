@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#16202e"/>
+      <stop offset="100%" stop-color="#080c12"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="0" fill="url(#bgGrad)"/>
+
+  <!--
+    LOGO STRUCTURE (based on image analysis):
+    The icon has 2 nested chevron/chevron shapes that look like a double-peaked roof.
+    Left/outer parts = dark green
+    Right/inner parts = sky blue
+    They are parallelogram-shaped bars arranged in a V/roof pattern
+  -->
+
+  <!-- === OUTER CHEVRON (dark green) === -->
+  <!-- Left bar of outer chevron: diagonal going down-left to up-center -->
+  <polygon points="
+    68,295
+    108,295
+    208,155
+    168,155
+  " fill="#1B6B3A"/>
+
+  <!-- Right bar of outer chevron: diagonal going down-right to up-center -->
+  <polygon points="
+    444,295
+    404,295
+    304,155
+    344,155
+  " fill="#1B6B3A"/>
+
+  <!-- Bottom-left leg of outer chevron -->
+  <polygon points="
+    68,295
+    68,338
+    152,338
+    152,295
+  " fill="#1B6B3A"/>
+
+  <!-- Bottom-right leg of outer chevron -->
+  <polygon points="
+    444,295
+    444,338
+    360,338
+    360,295
+  " fill="#1B6B3A"/>
+
+  <!-- === INNER CHEVRON (sky blue) === -->
+  <!-- Left bar of inner chevron -->
+  <polygon points="
+    148,315
+    188,315
+    256,218
+    216,218
+  " fill="#3B9FE8"/>
+
+  <!-- Right bar of inner chevron -->
+  <polygon points="
+    364,315
+    324,315
+    256,218
+    296,218
+  " fill="#3B9FE8"/>
+
+  <!-- Bottom-left leg of inner chevron -->
+  <polygon points="
+    148,315
+    148,358
+    216,358
+    216,315
+  " fill="#3B9FE8"/>
+
+  <!-- Bottom-right leg of inner chevron -->
+  <polygon points="
+    364,315
+    364,358
+    296,358
+    296,315
+  " fill="#3B9FE8"/>
+
+  <!-- === TEXT === -->
+  <text x="256" y="423"
+        font-family="'Arial Black', 'Arial Bold', Arial, sans-serif"
+        font-weight="900"
+        font-size="66"
+        fill="#3B9FE8"
+        text-anchor="middle"
+        letter-spacing="3">BÁO GIÁ</text>
+
+  <text x="256" y="463"
+        font-family="Arial, sans-serif"
+        font-weight="300"
+        font-size="26"
+        fill="#6B8299"
+        text-anchor="middle"
+        letter-spacing="12">DỰ KIẾN</text>
+</svg>

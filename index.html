@@ -332,7 +332,11 @@
 <div id="loginOverlay">
   <div class="login-card">
     <div class="login-logo">
-      <div class="login-logo-icon">🏠</div>
+      <img src="https://raw.githubusercontent.com/litchifoods/baogiaappscript/main/Favi%20baogia%20512x512.png"
+           alt="Báo Giá Dự Kiến"
+           style="width:90px;height:90px;object-fit:contain;border-radius:16px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;"
+           onerror="this.style.display='none';document.getElementById('loginLogoFallback').style.display='flex'">
+      <div id="loginLogoFallback" style="display:none;width:80px;height:80px;background:linear-gradient(135deg,#1B4332,#2D6A4F);border-radius:16px;align-items:center;justify-content:center;font-size:36px;margin:0 auto 10px;">🏠</div>
       <h2>Nội Thất Tính Tuyết</h2>
       <p>Công cụ dự kiến báo giá & tính lợi nhuận</p>
     </div>
@@ -362,6 +366,7 @@
   </div>
   <div class="header-badge">PRO TOOL</div>
   <div id="syncBadge" style="display:none;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.15);color:#fff;margin-left:8px;"></div>
+  <button id="syncNowBtn" onclick="syncNow()" title="Đồng bộ sản phẩm từ Google Sheet" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:12px;padding:5px 10px;border-radius:16px;cursor:pointer;font-family:inherit;display:none;margin-left:4px;">🔄 Sync</button>
   <span id="currentUserBadge"></span>
   <button id="logoutBtn" onclick="doLogout()" style="display:none;">🔓 Đăng xuất</button>
 </div>
@@ -553,7 +558,10 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
       <div class="section-title" style="margin:0">Bảng giá nhập hàng</div>
-      <button class="btn btn-primary" onclick="openAddModal()">+ Thêm sản phẩm mới</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="syncNow()" id="dbSyncBtn" title="Lấy dữ liệu mới nhất từ Google Sheet">🔄 Đồng bộ từ Sheet</button>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Thêm sản phẩm mới</button>
+      </div>
     </div>
     <div style="margin-bottom:14px;"><input type="text" id="dbSearch" placeholder="🔍  Tìm kiếm sản phẩm..." oninput="renderDB()" style="width:320px;max-width:100%;"></div>
     <div class="items-table-wrap">
@@ -1722,19 +1730,31 @@ function setSyncStatus(status) {
 }
 
 // Đọc dữ liệu từ Google Sheet khi mở app
-async function syncFromSheet() {
+async function syncFromSheet(showToast = false) {
   if (!_apiReady()) return;
   setSyncStatus('syncing');
   try {
-    const res = await fetch(`${API_URL}?action=getAll&token=${API_TOKEN}`);
+    // Luôn fetch thẳng từ Sheet, không dùng cache — thêm timestamp để tránh browser cache
+    const res = await fetch(`${API_URL}?action=getAll&token=${API_TOKEN}&_t=${Date.now()}`);
     const data = await res.json();
     if (data.ok) {
+      let updated = false;
       // Cập nhật sản phẩm nếu Sheet có dữ liệu
       if (data.products && data.products.length > 0) {
+        const oldCount = PRODUCTS.length;
         PRODUCTS = data.products;
         try { localStorage.setItem('nttt_products', JSON.stringify(PRODUCTS)); } catch(e) {}
         refreshDropdowns();
         renderDB();
+        updated = true;
+        if (showToast) {
+          const newCount = PRODUCTS.length;
+          const diff = newCount - oldCount;
+          const msg = diff > 0 ? `✅ Đồng bộ xong! Đã thêm ${diff} sản phẩm mới (tổng: ${newCount})` 
+                    : diff < 0 ? `✅ Đồng bộ xong! Đã xoá ${Math.abs(diff)} sản phẩm (tổng: ${newCount})`
+                    : `✅ Đã đồng bộ — ${newCount} sản phẩm (không có thay đổi)`;
+          showSyncToast(msg, 'ok');
+        }
       }
       // Cập nhật thông tin cửa hàng
       if (data.store && Object.keys(data.store).length > 0) {
@@ -1742,13 +1762,47 @@ async function syncFromSheet() {
         applyStoreInfo();
       }
       setSyncStatus('synced');
+      // Hiện nút sync trong header sau khi đã kết nối thành công
+      const syncBtn = document.getElementById('syncNowBtn');
+      if (syncBtn) syncBtn.style.display = 'inline-block';
       setTimeout(() => { const b = document.getElementById('syncBadge'); if(b) b.style.display='none'; }, 3000);
     } else {
       setSyncStatus('offline');
+      if (showToast) showSyncToast('❌ Không kết nối được Google Sheet', 'err');
     }
   } catch(e) {
     setSyncStatus('offline');
+    if (showToast) showSyncToast('❌ Lỗi kết nối: ' + e.message, 'err');
   }
+}
+
+// Hàm gọi từ nút Sync thủ công
+async function syncNow() {
+  const btn = document.getElementById('syncNowBtn');
+  if (btn) { btn.textContent = '⟳ Đang sync...'; btn.disabled = true; }
+  await syncFromSheet(true);
+  if (btn) { btn.textContent = '🔄 Sync'; btn.disabled = false; }
+}
+
+// Toast thông báo sync (hiện ở góc màn hình)
+function showSyncToast(msg, type) {
+  let toast = document.getElementById('syncToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'syncToast';
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+      'z-index:99998;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;' +
+      'font-family:inherit;box-shadow:0 4px 20px rgba(0,0,0,0.2);transition:opacity 0.3s;' +
+      'max-width:90vw;text-align:center;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.background = type === 'ok' ? '#2D6A4F' : '#C0392B';
+  toast.style.color = '#fff';
+  toast.style.opacity = '1';
+  toast.style.display = 'block';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => { toast.style.display = 'none'; }, 300); }, 4000);
 }
 
 // Gửi dữ liệu lên Google Sheet (fire-and-forget)
@@ -1780,6 +1834,8 @@ addQuoteRow();
 addNoteRow();
 // Đồng bộ dữ liệu từ Google Sheet khi tải trang
 syncFromSheet();
+// Tự động sync lại mỗi 5 phút để cập nhật sản phẩm mới từ Sheet
+setInterval(() => syncFromSheet(false), 5 * 60 * 1000);
 
 
 // ============================================================
