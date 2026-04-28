@@ -798,7 +798,13 @@ const DEFAULT_PRODUCTS = [
 ];
 
 function loadProducts() {
-  try { const s = localStorage.getItem('nttt_products'); if (s) return JSON.parse(s); } catch(e) {}
+  try {
+    const s = localStorage.getItem('nttt_products');
+    if (s) {
+      const arr = JSON.parse(s);
+      return arr.map(p => ({ ...p, price: Math.round(Number(p.price) || 0) }));
+    }
+  } catch(e) {}
   return JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
 }
 function saveProducts() {
@@ -823,6 +829,38 @@ function switchTab(t, btn) {
 
 // =========== DROPDOWN ===========
 const ddState = {};
+// ── Chuẩn hóa tiếng Việt: bỏ dấu, lowercase ────────────────
+function normalizeVN(str) {
+  if (!str) return '';
+  return str.normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+    .toLowerCase().trim();
+}
+
+// ── Tìm kiếm thông minh: có dấu / không dấu đều ra kết quả ──
+// Ưu tiên: khớp chính xác > bắt đầu bằng > chứa từ khóa
+function smartFilter(products, q) {
+  if (!q || !q.trim()) return products;
+  const qN = normalizeVN(q);
+  const qL = q.toLowerCase().trim();
+  const scored = [];
+  for (const p of products) {
+    const nN = normalizeVN(p.name);
+    const nL = p.name.toLowerCase();
+    if (nN === qN || nL === qL)                     scored.push({ p, s: 4 });
+    else if (nN.startsWith(qN) || nL.startsWith(qL)) scored.push({ p, s: 3 });
+    else if (nN.includes(qN) || nL.includes(qL))     scored.push({ p, s: 2 });
+    else {
+      // Khớp từng từ: gõ "tu ao" ra "Tủ Áo..."
+      const words = qN.split(/\s+/).filter(Boolean);
+      if (words.length > 1 && words.every(w => nN.includes(w))) scored.push({ p, s: 1 });
+    }
+  }
+  scored.sort((a, b) => b.s - a.s);
+  return scored.map(x => x.p);
+}
+
 function initDropdown(id) { ddState[id] = { selectedIdx: -1, value: null }; renderDropdownList(id, ''); }
 function toggleDropdown(id) {
   const panel = document.getElementById(id + '-panel');
@@ -844,11 +882,11 @@ function filterDropdown(id, q) { renderDropdownList(id, q); }
 function renderDropdownList(id, q) {
   const list = document.getElementById(id + '-list');
   if (!list) return;
-  const filtered = PRODUCTS.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
+  const filtered = smartFilter(PRODUCTS, q);
   if (!filtered.length) { list.innerHTML = '<div class="dropdown-empty">Không tìm thấy sản phẩm</div>'; return; }
   list.innerHTML = filtered.map(p => {
     const realIdx = PRODUCTS.indexOf(p);
-    return `<div class="dropdown-item" onclick="selectProduct('${id}', ${realIdx})"><span>${p.name}</span><span class="price-hint">${fmt(p.price)}/m²</span></div>`;
+    return `<div class="dropdown-item" onclick="selectProduct('${id}', ${realIdx})"><span>${p.name}</span><span class="price-hint">${fmt(Math.round(p.price))}/m²</span></div>`;
   }).join('');
 }
 function selectProduct(id, idx) {
@@ -859,14 +897,14 @@ function selectProduct(id, idx) {
   closeAllDropdowns();
   if (id === 'sd1') {
     document.getElementById('material').value = p.mat;
-    document.getElementById('importPrice').value = p.price;
+    document.getElementById('importPrice').value = Math.round(p.price);
     const slider = document.getElementById('priceSlider');
     slider.max = Math.max(2000000, p.price * 4);
     slider.value = Math.round(p.price * 1.6);
     document.getElementById('sellPriceInput').value = Math.round(p.price * 1.6);
     calc();
   } else if (id === 'sd2') {
-    document.getElementById('m_import').value = p.price;
+    document.getElementById('m_import').value = Math.round(p.price);
   }
 }
 function getSelectedProduct(id) { return ddState[id] ? ddState[id].value : null; }
@@ -893,7 +931,7 @@ function filterQuoteDD(rowId, q) { renderQuoteDD('qdd-' + rowId, q); }
 function renderQuoteDD(ddId, q) {
   const list = document.getElementById(ddId + '-list');
   if (!list) return;
-  const filtered = PRODUCTS.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
+  const filtered = smartFilter(PRODUCTS, q);
   if (!filtered.length) { list.innerHTML = '<div class="dropdown-empty">Không tìm thấy</div>'; return; }
   list.innerHTML = filtered.map(p => {
     const idx = PRODUCTS.indexOf(p);
@@ -1067,7 +1105,9 @@ function renderMulti() {
 function renderDB() {
   const q = (document.getElementById('dbSearch').value || '').toLowerCase();
   const tbody = document.getElementById('dbBody');
-  const filtered = PRODUCTS.filter(p => p.name.toLowerCase().includes(q) || p.mat.toLowerCase().includes(q));
+  const byName = smartFilter(PRODUCTS, q);
+  const byMat  = q ? PRODUCTS.filter(p => normalizeVN(p.mat).includes(normalizeVN(q))) : [];
+  const filtered = byName.length ? byName : byMat;
   if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Không tìm thấy sản phẩm nào</td></tr>'; return; }
   tbody.innerHTML = filtered.map(p => {
     const realIdx = PRODUCTS.indexOf(p);
@@ -1742,7 +1782,7 @@ async function syncFromSheet(showToast = false) {
       // Cập nhật sản phẩm nếu Sheet có dữ liệu
       if (data.products && data.products.length > 0) {
         const oldCount = PRODUCTS.length;
-        PRODUCTS = data.products;
+        PRODUCTS = data.products.map(p => ({ ...p, price: Math.round(Number(p.price) || 0) }));
         try { localStorage.setItem('nttt_products', JSON.stringify(PRODUCTS)); } catch(e) {}
         refreshDropdowns();
         renderDB();
