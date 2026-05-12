@@ -581,8 +581,7 @@
   <div class="bq-actions no-print">
     <button class="btn btn-primary" onclick="addQuoteRow()">➕ Thêm dòng sản phẩm</button>
     <button class="btn btn-secondary" onclick="addNoteRow()">📝 Thêm ghi chú</button>
-    <button class="btn btn-gold" onclick="printQuote()">🖨️ In báo giá</button>
-    <button class="btn btn-pdf" onclick="openPrintPreview()">📄 Xuất PDF (Khuyên dùng)</button>
+    <button class="btn btn-pdf" onclick="openPrintPreview()">📄 Xuất file PDF và in</button>
     <button class="btn btn-secondary" onclick="exportQuoteHTML()">💾 Tải file HTML</button>
     <button class="btn btn-danger btn-sm" onclick="clearQuote()">🗑 Xóa trắng</button>
   </div>
@@ -1459,34 +1458,80 @@ function handleLogoUpload(event) {
   const reader = new FileReader();
   reader.onload = function(e) {
     logoDataUrl = e.target.result;
-    document.getElementById('logoImg').src = logoDataUrl;
-    document.getElementById('logoImg').style.maxHeight = logoSize + 'px';
-    document.getElementById('logoPlaceholder').style.display = 'none';
-    document.getElementById('logoPreviewWrap').style.display = 'block';
-    document.getElementById('logoControlsPanel').style.display = 'block';
-    document.getElementById('logoUploadArea').style.cursor = 'default';
+    applyLogoToUI(logoDataUrl);
+    // Lưu vào localStorage để tự động hiện lại lần sau
+    try {
+      localStorage.setItem('nttt_logo_data', logoDataUrl);
+      saveLogoCfg();
+    } catch(err) {
+      // Ảnh quá lớn (>5MB) không lưu được — vẫn dùng bình thường trong phiên này
+      console.warn('Logo quá lớn, không lưu được vào localStorage:', err.message);
+    }
   };
   reader.readAsDataURL(file);
+}
+
+// Áp dụng logo lên giao diện
+function applyLogoToUI(dataUrl) {
+  document.getElementById('logoImg').src = dataUrl;
+  document.getElementById('logoImg').style.maxHeight = logoSize + 'px';
+  document.getElementById('logoPlaceholder').style.display = 'none';
+  document.getElementById('logoPreviewWrap').style.display = 'block';
+  document.getElementById('logoControlsPanel').style.display = 'block';
+  document.getElementById('logoUploadArea').style.cursor = 'default';
+}
+
+// Lưu cài đặt logo (align, vAlign, size)
+function saveLogoCfg() {
+  try {
+    localStorage.setItem('nttt_logo_cfg', JSON.stringify({ align: logoAlign, vAlign: logoVAlign, size: logoSize }));
+  } catch(e) {}
+}
+
+// Khôi phục logo từ localStorage khi tải trang
+function restoreLogo() {
+  try {
+    const saved = localStorage.getItem('nttt_logo_data');
+    const cfg   = JSON.parse(localStorage.getItem('nttt_logo_cfg') || '{}');
+    if (cfg.align)  { logoAlign  = cfg.align;  setLogoAlign(cfg.align); }
+    if (cfg.vAlign) { logoVAlign = cfg.vAlign; setLogoVAlign(cfg.vAlign); }
+    if (cfg.size)   {
+      logoSize = cfg.size;
+      const slider = document.getElementById('logoSizeSlider');
+      const label  = document.getElementById('logoSizeLabel');
+      if (slider) slider.value = cfg.size;
+      if (label)  label.textContent = cfg.size + 'px';
+    }
+    if (saved) {
+      logoDataUrl = saved;
+      applyLogoToUI(saved);
+    }
+  } catch(e) {}
 }
 
 function setLogoAlign(align) {
   logoAlign = align;
   ['left','center','right'].forEach(a => {
-    document.getElementById('align-'+a).classList.toggle('active', a === align);
+    const el = document.getElementById('align-'+a);
+    if (el) el.classList.toggle('active', a === align);
   });
+  if (logoDataUrl) saveLogoCfg();
 }
 
 function setLogoVAlign(va) {
   logoVAlign = va;
   ['top','middle','bottom'].forEach(a => {
-    document.getElementById('valign-'+a).classList.toggle('active', a === va);
+    const el = document.getElementById('valign-'+a);
+    if (el) el.classList.toggle('active', a === va);
   });
+  if (logoDataUrl) saveLogoCfg();
 }
 
 function setLogoSize(val) {
   logoSize = parseInt(val);
   document.getElementById('logoSizeLabel').textContent = val + 'px';
   document.getElementById('logoImg').style.maxHeight = val + 'px';
+  if (logoDataUrl) saveLogoCfg();
 }
 
 function removeLogo() {
@@ -1497,6 +1542,11 @@ function removeLogo() {
   document.getElementById('logoPreviewWrap').style.display = 'none';
   document.getElementById('logoControlsPanel').style.display = 'none';
   document.getElementById('logoUploadArea').style.cursor = 'pointer';
+  // Xóa khỏi localStorage
+  try {
+    localStorage.removeItem('nttt_logo_data');
+    localStorage.removeItem('nttt_logo_cfg');
+  } catch(e) {}
 }
 
 // =========== DOWNLOAD PDF ===========
@@ -1666,7 +1716,7 @@ ${notesHTML ? '<div class="notes-box"><div class="notes-title">Ghi chú</div>' +
 
   const pw = window.open('', '_blank', 'width=920,height=750,scrollbars=yes');
   if (!pw) {
-    alert('Trình duyệt chặn cửa sổ mới!\nHãy cho phép pop-up:\n• Nhấn vào 🔒 trên thanh địa chỉ → Pop-ups → Allow\nHoặc dùng nút "🖨️ In báo giá" rồi chọn Save as PDF.');
+    alert('Trình duyệt chặn cửa sổ mới!\nHãy cho phép pop-up:\n• Nhấn vào 🔒 trên thanh địa chỉ → Pop-ups → Allow\nHoặc dùng nút "📄 Xuất file PDF và in" rồi chọn Save as PDF.');
     return;
   }
   pw.document.write(html);
@@ -1872,6 +1922,8 @@ applyStoreInfo();
 setTodayDate();
 addQuoteRow();
 addNoteRow();
+// Khôi phục logo đã lưu
+restoreLogo();
 // Đồng bộ dữ liệu từ Google Sheet khi tải trang
 syncFromSheet();
 // Tự động sync lại mỗi 5 phút để cập nhật sản phẩm mới từ Sheet
