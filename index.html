@@ -366,7 +366,7 @@
   </div>
   <div class="header-badge">PRO TOOL</div>
   <div id="syncBadge" style="display:none;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.15);color:#fff;margin-left:8px;"></div>
-  <button id="syncNowBtn" onclick="syncNow()" title="Đồng bộ sản phẩm từ Google Sheet" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:12px;padding:5px 10px;border-radius:16px;cursor:pointer;font-family:inherit;display:none;margin-left:4px;">🔄 Sync</button>
+  <button id="syncNowBtn" onclick="syncNow()" title="Nhấn để lấy sản phẩm mới nhất từ Google Sheet" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:12px;padding:5px 10px;border-radius:16px;cursor:pointer;font-family:inherit;display:inline-block;margin-left:4px;">🔄 Sync</button>
   <span id="currentUserBadge"></span>
   <button id="logoutBtn" onclick="doLogout()" style="display:none;">🔓 Đăng xuất</button>
 </div>
@@ -1905,9 +1905,7 @@ async function syncFromSheet(showToast = false) {
         applyStoreInfo();
       }
       setSyncStatus('synced');
-      // Hiện nút sync trong header sau khi đã kết nối thành công
-      const syncBtn = document.getElementById('syncNowBtn');
-      if (syncBtn) syncBtn.style.display = 'inline-block';
+      // Nút sync luôn hiển thị
       setTimeout(() => { const b = document.getElementById('syncBadge'); if(b) b.style.display='none'; }, 3000);
     } else {
       setSyncStatus('offline');
@@ -1982,7 +1980,7 @@ formatMoneyInputs();
 // Đồng bộ dữ liệu từ Google Sheet khi tải trang
 syncFromSheet();
 // Tự động sync lại mỗi 5 phút để cập nhật sản phẩm mới từ Sheet
-setInterval(() => syncFromSheet(false), 5 * 60 * 1000);
+setInterval(() => syncFromSheet(false), 2 * 60 * 1000); // Tự sync mỗi 2 phút
 
 
 // ============================================================
@@ -2036,6 +2034,8 @@ function showApp(user, token) {
   const logoutBtn = document.getElementById('logoutBtn');
   if (badge) badge.textContent = '👤 ' + user;
   if (logoutBtn) logoutBtn.style.display = 'inline-block';
+  // Sync ngay khi vào app (lấy sản phẩm mới nhất từ Sheet)
+  syncFromSheet(false);
 }
 
 function clearAuth() {
