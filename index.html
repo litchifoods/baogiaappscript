@@ -30,7 +30,7 @@
   .tab-btn.active { color: var(--green); border-bottom-color: var(--green); background: var(--green-soft); font-weight: 600; box-shadow: inset 0 -2px 0 var(--green); }
   .tab-btn:hover:not(.active) { color: var(--text); background: #F3F1EC; }
 
-  .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+  .main { max-width: 100%; margin: 0; padding: 28px 32px 60px; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
@@ -165,10 +165,15 @@
   .bq-title-row .date-group { width: 200px; }
 
   .quote-table-wrap { overflow-x: auto; }
-  .quote-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
-  .quote-table th { background: var(--green); color: #fff; padding: 10px 8px; text-align: center; font-weight: 500; font-size: 12px; white-space: nowrap; }
+  .quote-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 820px; }
+  .quote-table th { background: var(--green); color: #fff; padding: 11px 10px; text-align: center; font-weight: 600; font-size: 13px; white-space: nowrap; }
   .quote-table td { padding: 6px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  .quote-table td input[type=text], .quote-table td input[type=number] { height: 34px; font-size: 12px; }
+  /* Dropdown trong bảng báo giá — to hơn để dễ chọn */
+  .quote-table .search-display { height: 38px; font-size: 13px; min-width: 240px; }
+  .quote-table .dropdown-panel { min-width: 320px; }
+  .quote-table .dropdown-item { padding: 10px 14px; font-size: 13px; }
+  .quote-table .dropdown-list { max-height: 280px; }
+  .quote-table td input[type=text], .quote-table td input[type=number] { height: 38px; font-size: 13px; }
   .td-stt { text-align: center; width: 36px; font-weight: 600; color: var(--text-muted); font-size: 12px; }
   .td-thanhtien { text-align: right; font-weight: 700; color: var(--success); font-size: 13px; white-space: nowrap; padding-right: 10px !important; }
   .td-action { text-align: center; width: 36px; }
@@ -505,7 +510,7 @@
       <div class="form-group"><label>Chi phí khác (VNĐ)</label><input type="number" id="m_other" value="0"></div>
     </div>
     <div class="form-grid" style="margin-top:14px;">
-      <div class="form-group"><label>Giá bán / m² (VNĐ)</label><input type="number" id="m_sell" placeholder="0"></div>
+      <div class="form-group"><label>Giá bán / m²-md (VNĐ)</label><input type="number" id="m_sell" placeholder="0"></div>
       <div class="form-group" style="justify-content:flex-end;"><label>&nbsp;</label><button class="btn btn-primary" style="height:40px;" onclick="addItem()">+ Thêm vào danh sách</button></div>
     </div>
   </div>
@@ -668,12 +673,12 @@
         <thead>
           <tr>
             <th style="width:36px">STT</th>
-            <th style="min-width:160px">Tên sản phẩm</th>
+            <th style="min-width:260px">Tên sản phẩm</th>
             <th style="min-width:120px">Mô tả chất liệu</th>
             <th style="min-width:110px">Đơn giá (đ/m²-md)</th>
             <th style="min-width:75px">Dài (m)</th>
             <th style="min-width:75px">Cao (m)</th>
-            <th style="min-width:80px">DT (m²)</th>
+            <th style="min-width:80px">DT (m²-md)</th>
             <th style="min-width:55px">SL</th>
             <th style="min-width:110px">Thành tiền</th>
             <th class="no-print" style="width:36px"></th>
