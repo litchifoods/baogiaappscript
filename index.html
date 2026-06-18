@@ -169,10 +169,31 @@
   .quote-table th { background: var(--green); color: #fff; padding: 11px 10px; text-align: center; font-weight: 600; font-size: 13px; white-space: nowrap; }
   .quote-table td { padding: 6px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   /* Dropdown trong bảng báo giá — to hơn để dễ chọn */
-  .quote-table .search-display { height: 38px; font-size: 13px; min-width: 240px; }
-  .quote-table .dropdown-panel { min-width: 320px; }
-  .quote-table .dropdown-item { padding: 10px 14px; font-size: 13px; }
-  .quote-table .dropdown-list { max-height: 280px; }
+  .quote-table .search-display { height: 36px; font-size: 13px; width: 100%; }
+  /* Dropdown fixed — thoát khỏi bảng, hiện ngay chỗ gõ không cần cuộn */
+  .quote-dd-fixed {
+    position: fixed; background: #fff;
+    border: 2px solid var(--green); border-radius: 12px;
+    z-index: 99995; box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+    overflow: hidden; display: none; width: 400px;
+  }
+  .quote-dd-fixed.open { display: block; }
+  .quote-dd-fixed .qdd-search-inp {
+    width: 100%; height: 42px; border: none; border-bottom: 2px solid var(--border);
+    padding: 0 14px; font-size: 14px; font-family: inherit;
+    background: var(--cream); display: block;
+  }
+  .quote-dd-fixed .qdd-search-inp:focus { outline: none; background: #fff; border-bottom-color: var(--green); }
+  .quote-dd-fixed .qdd-list { max-height: 260px; overflow-y: auto; }
+  .quote-dd-fixed .qdd-item {
+    padding: 10px 14px; font-size: 13px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: background 0.1s; border-bottom: 1px solid var(--border);
+  }
+  .quote-dd-fixed .qdd-item:last-child { border-bottom: none; }
+  .quote-dd-fixed .qdd-item:hover { background: var(--green-soft); }
+  .quote-dd-fixed .qdd-empty { padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+  .quote-dd-fixed .qdd-price { font-size: 11px; color: var(--text-muted); }
   .quote-table td input[type=text], .quote-table td input[type=number] { height: 38px; font-size: 13px; }
   .td-stt { text-align: center; width: 36px; font-weight: 600; color: var(--text-muted); font-size: 12px; }
   .td-thanhtien { text-align: right; font-weight: 700; color: var(--success); font-size: 13px; white-space: nowrap; padding-right: 10px !important; }
@@ -673,14 +694,14 @@
         <thead>
           <tr>
             <th style="width:36px">STT</th>
-            <th style="min-width:260px">Tên sản phẩm</th>
-            <th style="min-width:120px">Mô tả chất liệu</th>
-            <th style="min-width:110px">Đơn giá (đ/m²-md)</th>
-            <th style="min-width:75px">Dài (m)</th>
-            <th style="min-width:75px">Cao (m)</th>
-            <th style="min-width:80px">DT (m²-md)</th>
-            <th style="min-width:55px">SL</th>
-            <th style="min-width:110px">Thành tiền</th>
+            <th style="width:28%">Tên sản phẩm</th>
+            <th style="width:13%">Mô tả chất liệu</th>
+            <th style="width:9%">Đơn giá (đ/m²-md)</th>
+            <th style="width:6%">Dài (m)</th>
+            <th style="width:6%">Cao (m)</th>
+            <th style="width:6%">DT (m²-md)</th>
+            <th style="width:5%">SL</th>
+            <th style="width:9%">Thành tiền</th>
             <th class="no-print" style="width:36px"></th>
           </tr>
         </thead>
@@ -968,33 +989,88 @@ function getSelectedProduct(id) { return ddState[id] ? ddState[id].value : null;
 
 // =========== QUOTE DROPDOWN ===========
 function initQuoteDropdown(rowId) {
-  const ddId = 'qdd-' + rowId;
-  ddState[ddId] = { value: null };
-  renderQuoteDD(ddId, '');
+  // Panel fixed dùng chung — không cần init per-row
 }
-function toggleQuoteDD(rowId) {
-  const ddId = 'qdd-' + rowId;
-  const panel = document.getElementById(ddId + '-panel');
-  const display = document.getElementById(ddId + '-display');
-  const isOpen = panel.classList.contains('open');
-  closeAllDropdowns();
-  if (!isOpen) {
-    panel.classList.add('open'); display.classList.add('open');
-    const si = document.getElementById(ddId + '-search'); si.value = ''; renderQuoteDD(ddId, '');
-    setTimeout(() => si.focus(), 50);
+// ── Quote dropdown fixed — 1 panel duy nhất toàn trang ─────
+let _quoteDDActiveRow = null;
+
+function openQuoteDD(rowId, displayEl) {
+  _quoteDDActiveRow = rowId;
+  const panel = document.getElementById('quoteDDFixed');
+  const inp   = document.getElementById('quoteDDSearch');
+  const rect  = displayEl.getBoundingClientRect();
+
+  // Tính vị trí: hiện ngay dưới ô đang click
+  let top  = rect.bottom + 6;
+  let left = rect.left;
+
+  // Nếu panel bị tràn xuống dưới màn hình → hiện lên trên
+  const panelH = 320;
+  if (top + panelH > window.innerHeight - 20) {
+    top = rect.top - panelH - 6;
   }
+  // Nếu tràn sang phải
+  if (left + 400 > window.innerWidth - 10) {
+    left = window.innerWidth - 410;
+  }
+
+  panel.style.top  = top  + 'px';
+  panel.style.left = left + 'px';
+  panel.classList.add('open');
+
+  inp.value = '';
+  renderQuoteDDFixed('');
+  setTimeout(() => inp.focus(), 30);
 }
-function filterQuoteDD(rowId, q) { renderQuoteDD('qdd-' + rowId, q); }
-function renderQuoteDD(ddId, q) {
-  const list = document.getElementById(ddId + '-list');
+
+function closeQuoteDDFixed() {
+  document.getElementById('quoteDDFixed').classList.remove('open');
+  _quoteDDActiveRow = null;
+}
+
+function filterQuoteDDFixed(q) { renderQuoteDDFixed(q); }
+
+function renderQuoteDDFixed(q) {
+  const list = document.getElementById('quoteDDList');
   if (!list) return;
   const filtered = smartFilter(PRODUCTS, q);
-  if (!filtered.length) { list.innerHTML = '<div class="dropdown-empty">Không tìm thấy</div>'; return; }
+  if (!filtered.length) {
+    list.innerHTML = '<div class="qdd-empty">Không tìm thấy sản phẩm nào</div>';
+    return;
+  }
   list.innerHTML = filtered.map(p => {
     const idx = PRODUCTS.indexOf(p);
-    return `<div class="dropdown-item" onclick="selectQuoteProd('${ddId}',${idx})"><span>${p.name}</span><span class="price-hint">${fmt(p.price)}/m²</span></div>`;
+    return `<div class="qdd-item" onclick="selectQuoteDDFixed(${idx})">
+      <span>${p.name}</span>
+      <span class="qdd-price">${fmt(Math.round(p.price))}/m²</span>
+    </div>`;
   }).join('');
 }
+
+function selectQuoteDDFixed(idx) {
+  if (_quoteDDActiveRow === null) return;
+  const p   = PRODUCTS[idx];
+  const rowId = _quoteDDActiveRow;
+  const display = document.getElementById('qdd-' + rowId + '-display');
+  if (display) { display.textContent = p.name; display.classList.remove('placeholder-text'); }
+  const matEl = document.getElementById('qmat-' + rowId);
+  if (matEl && !matEl.value) matEl.value = p.mat;
+  closeQuoteDDFixed();
+  recalcRow(rowId);
+}
+
+// Đóng khi click ra ngoài
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('quoteDDFixed');
+  if (!panel) return;
+  if (!e.target.closest('#quoteDDFixed') && !e.target.closest('.search-display')) {
+    closeQuoteDDFixed();
+  }
+});
+
+// Các hàm cũ giữ lại để không lỗi (không dùng nữa)
+function toggleQuoteDD(rowId) {}
+function filterQuoteDD(rowId, q) {}
 function selectQuoteProd(ddId, idx) {
   const p = PRODUCTS[idx];
   const rowId = ddId.replace('qdd-', '');
@@ -1266,26 +1342,21 @@ function addQuoteRow() {
   tr.id = 'row-' + rowId;
   tr.innerHTML = `
     <td class="td-stt">${tbody.rows.length + 1}</td>
-    <td style="min-width:160px;">
-      <div class="search-dropdown" id="qdd-${rowId}">
-        <div class="search-display placeholder-text" id="qdd-${rowId}-display" onclick="toggleQuoteDD('${rowId}')" style="font-size:12px;height:34px;min-width:140px;">— Tìm sản phẩm —</div>
-        <div class="dropdown-panel" id="qdd-${rowId}-panel">
-          <div class="dropdown-search"><input type="text" placeholder="Tìm..." oninput="filterQuoteDD('${rowId}',this.value)" id="qdd-${rowId}-search"></div>
-          <div class="dropdown-list" id="qdd-${rowId}-list"></div>
-        </div>
-      </div>
+    <td>
+      <div class="search-display placeholder-text" id="qdd-${rowId}-display"
+           onclick="openQuoteDD('${rowId}', this)"
+           style="width:100%;cursor:pointer;font-size:13px;">— Tìm sản phẩm —</div>
     </td>
-    <td><input type="text" id="qmat-${rowId}" placeholder="Chất liệu..." style="min-width:100px;"></td>
-    <td><input type="number" id="qprice-${rowId}" placeholder="0" oninput="recalcRow('${rowId}')" style="min-width:95px;text-align:right;"></td>
-    <td><input type="number" id="qw-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRowArea('${rowId}')" style="min-width:65px;text-align:right;"></td>
-    <td><input type="number" id="qh-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRowArea('${rowId}')" style="min-width:65px;text-align:right;"></td>
-    <td><input type="number" id="qarea-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRow('${rowId}')" style="min-width:65px;text-align:right;background:#f7f5f0;"></td>
-    <td><input type="number" id="qqty-${rowId}" value="1" min="1" oninput="recalcRow('${rowId}')" style="min-width:48px;text-align:center;"></td>
+    <td><input type="text" id="qmat-${rowId}" placeholder="Chất liệu..." style="width:100%;"></td>
+    <td><input type="number" id="qprice-${rowId}" placeholder="0" oninput="recalcRow('${rowId}')" style="width:100%;text-align:right;"></td>
+    <td><input type="number" id="qw-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRowArea('${rowId}')" style="width:100%;text-align:right;"></td>
+    <td><input type="number" id="qh-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRowArea('${rowId}')" style="width:100%;text-align:right;"></td>
+    <td><input type="number" id="qarea-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRow('${rowId}')" style="width:100%;text-align:right;background:#f7f5f0;"></td>
+    <td><input type="number" id="qqty-${rowId}" value="1" min="1" oninput="recalcRow('${rowId}')" style="width:100%;text-align:center;"></td>
     <td class="td-thanhtien" id="qtotal-${rowId}">0đ</td>
     <td class="td-action no-print"><button class="btn btn-danger btn-sm" onclick="removeQuoteRow('${rowId}')">✕</button></td>
   `;
   tbody.appendChild(tr);
-  initQuoteDropdown(rowId);
   reindexQuoteRows();
 }
 
@@ -1769,6 +1840,14 @@ function openPrintPreview() {
 ${notesHTML ? '<div class="notes-box"><div class="notes-title">Ghi chú</div>' + notesHTML + '</div>' : ''}
 <div class="footer-unit"><strong style="color:#1B4332">${unit}</strong></div>
 <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script>
+
+<!-- QUOTE DROPDOWN FIXED PANEL (dùng chung cho tất cả row) -->
+<div class="quote-dd-fixed" id="quoteDDFixed">
+  <input class="qdd-search-inp" id="quoteDDSearch" type="text" placeholder="🔍  Gõ tên sản phẩm..."
+         oninput="filterQuoteDDFixed(this.value)"
+         onkeydown="if(event.key==='Escape')closeQuoteDDFixed()">
+  <div class="qdd-list" id="quoteDDList"></div>
+</div>
 </body>
 </html>`;
 
@@ -2130,5 +2209,13 @@ function doLogout() {
 // ============================================================
 
 </script>
+
+<!-- QUOTE DROPDOWN FIXED PANEL (dùng chung cho tất cả row) -->
+<div class="quote-dd-fixed" id="quoteDDFixed">
+  <input class="qdd-search-inp" id="quoteDDSearch" type="text" placeholder="🔍  Gõ tên sản phẩm..."
+         oninput="filterQuoteDDFixed(this.value)"
+         onkeydown="if(event.key==='Escape')closeQuoteDDFixed()">
+  <div class="qdd-list" id="quoteDDList"></div>
+</div>
 </body>
 </html>
