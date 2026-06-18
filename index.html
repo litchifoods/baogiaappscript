@@ -34,20 +34,20 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
-  .section-title { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
-  .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .section-title { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 28px; margin-bottom: 18px; box-shadow: var(--shadow); }
 
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
   .form-grid.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
   .form-grid.five { grid-template-columns: 1fr 1fr 1fr 1fr 1fr; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group { display: flex; flex-direction: column; gap: 7px; }
   .form-group.full { grid-column: 1 / -1; }
 
-  label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+  label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   input[type=text], input[type=number] {
-    height: 40px; border: 1.5px solid var(--border); border-radius: 8px;
-    padding: 0 12px; font-size: 14px; font-family: 'Be Vietnam Pro', sans-serif;
+    height: 46px; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 0 14px; font-size: 15px; font-family: 'Be Vietnam Pro', sans-serif;
     color: var(--text); background: var(--cream); transition: border 0.15s; width: 100%;
   }
   input:focus { outline: none; border-color: var(--green); background: #fff; }
@@ -55,8 +55,8 @@
 
   .search-dropdown { position: relative; }
   .search-display {
-    height: 40px; border: 1.5px solid var(--border); border-radius: 8px;
-    padding: 0 36px 0 12px; font-size: 14px; font-family: 'Be Vietnam Pro', sans-serif;
+    height: 46px; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 0 36px 0 14px; font-size: 15px; font-family: 'Be Vietnam Pro', sans-serif;
     color: var(--text); background: var(--cream); cursor: pointer; display: flex;
     align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     user-select: none; transition: border 0.15s; position: relative;
@@ -83,9 +83,9 @@
   .auto-tag { font-size: 10px; font-weight: 600; background: var(--green-soft); color: var(--green); padding: 2px 6px; border-radius: 4px; display: inline-block; }
 
   .results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-  .result-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
-  .result-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .result-value { font-size: 18px; font-weight: 600; color: var(--text); line-height: 1.2; }
+  .result-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 16px; text-align: center; }
+  .result-label { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .result-value { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.2; }
   .result-card.green-card { background: var(--success-bg); border-color: #A8D5B5; }
   .result-card.green-card .result-value { color: var(--success); }
   .result-card.red-card { background: var(--red-bg); border-color: #F5B8B2; }
@@ -813,6 +813,42 @@ function saveProducts() {
 let PRODUCTS = loadProducts();
 
 const fmt = n => Math.round(n).toLocaleString('vi-VN') + 'đ';
+const fmtNum = n => Math.round(n).toLocaleString('vi-VN'); // Có dấu chấm, không có 'đ'
+
+// Format input tiền: hiện dấu chấm khi blur, số thuần khi focus
+function formatMoneyInputs() {
+  // Danh sách id các ô nhập tiền cần format
+  const moneyIds = ['shipIn','shipOut','install','other',
+                    'm_shipIn','m_shipOut','m_install','m_other','m_sell'];
+  moneyIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Khi blur: hiện dấu chấm
+    el.addEventListener('blur', function() {
+      const v = parseInt(this.value.replace(/\./g,'')) || 0;
+      if (v > 0) this.value = v.toLocaleString('vi-VN');
+    });
+    // Khi focus: về số thuần để nhập
+    el.addEventListener('focus', function() {
+      const v = parseInt(this.value.replace(/\./g,'').replace(/[^0-9]/g,'')) || 0;
+      if (v > 0) this.value = v;
+      else this.value = '';
+    });
+    // Khi input: bỏ chữ không phải số
+    el.addEventListener('input', function() {
+      const pos = this.selectionStart;
+      const raw = this.value.replace(/[^0-9]/g,'');
+      if (this.value !== raw) { this.value = raw; this.setSelectionRange(pos-1,pos-1); }
+    });
+  });
+}
+
+// Đọc giá trị ô tiền (kể cả đang có dấu chấm)
+function getMoneyVal(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  return parseInt((el.value || '0').replace(/\./g,'').replace(/[^0-9]/g,'')) || 0;
+}
 let historyData = [];
 let multiItems = [];
 let quoteRowCounter = 0;
@@ -967,10 +1003,10 @@ function getCurrentCalcData() {
   const importPrice = parseFloat(document.getElementById('importPrice').value) || 0;
   const area = parseFloat(document.getElementById('area').value) || 0;
   const qty = parseFloat(document.getElementById('qty').value) || 1;
-  const shipIn = parseFloat(document.getElementById('shipIn').value) || 0;
-  const shipOut = parseFloat(document.getElementById('shipOut').value) || 0;
-  const install = parseFloat(document.getElementById('install').value) || 0;
-  const other = parseFloat(document.getElementById('other').value) || 0;
+  const shipIn  = getMoneyVal('shipIn');
+  const shipOut = getMoneyVal('shipOut');
+  const install = getMoneyVal('install');
+  const other   = getMoneyVal('other');
   const sellPrice = parseFloat(document.getElementById('sellPriceInput').value) || 0;
   const extraCost = shipIn + shipOut + install + other;
   const totalCost = importPrice * area * qty + extraCost;
@@ -1043,11 +1079,11 @@ function addItem() {
   const w = parseFloat(document.getElementById('m_w').value) || 0;
   const h = parseFloat(document.getElementById('m_h').value) || 0;
   const qty = parseFloat(document.getElementById('m_qty').value) || 1;
-  const shipIn = parseFloat(document.getElementById('m_shipIn').value) || 0;
-  const shipOut = parseFloat(document.getElementById('m_shipOut').value) || 0;
-  const install = parseFloat(document.getElementById('m_install').value) || 0;
-  const other = parseFloat(document.getElementById('m_other').value) || 0;
-  const sell = parseFloat(document.getElementById('m_sell').value) || 0;
+  const shipIn  = getMoneyVal('m_shipIn');
+  const shipOut = getMoneyVal('m_shipOut');
+  const install = getMoneyVal('m_install');
+  const other   = getMoneyVal('m_other');
+  const sell    = getMoneyVal('m_sell');
   if (!w || !h) { alert('Vui lòng nhập kích thước!'); return; }
   const area = w * h;
   const extraCost = shipIn + shipOut + install + other;
@@ -1924,6 +1960,8 @@ addQuoteRow();
 addNoteRow();
 // Khôi phục logo đã lưu
 restoreLogo();
+// Format input tiền
+formatMoneyInputs();
 // Đồng bộ dữ liệu từ Google Sheet khi tải trang
 syncFromSheet();
 // Tự động sync lại mỗi 5 phút để cập nhật sản phẩm mới từ Sheet
