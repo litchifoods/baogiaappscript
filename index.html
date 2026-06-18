@@ -817,29 +817,46 @@ const fmtNum = n => Math.round(n).toLocaleString('vi-VN'); // Có dấu chấm, 
 
 // Format input tiền: hiện dấu chấm khi blur, số thuần khi focus
 function formatMoneyInputs() {
-  // Danh sách id các ô nhập tiền cần format
   const moneyIds = ['shipIn','shipOut','install','other',
                     'm_shipIn','m_shipOut','m_install','m_other','m_sell'];
   moneyIds.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    // Khi blur: hiện dấu chấm
-    el.addEventListener('blur', function() {
-      const v = parseInt(this.value.replace(/\./g,'')) || 0;
-      if (v > 0) this.value = v.toLocaleString('vi-VN');
-    });
-    // Khi focus: về số thuần để nhập
-    el.addEventListener('focus', function() {
-      const v = parseInt(this.value.replace(/\./g,'').replace(/[^0-9]/g,'')) || 0;
-      if (v > 0) this.value = v;
-      else this.value = '';
-    });
-    // Khi input: bỏ chữ không phải số
+
+    // Chuyển input type=number → text để hiện dấu chấm lúc gõ
+    el.type = 'text';
+    el.inputMode = 'numeric';
+
+    // Khi gõ: format dấu chấm ngay lập tức
     el.addEventListener('input', function() {
-      const pos = this.selectionStart;
-      const raw = this.value.replace(/[^0-9]/g,'');
-      if (this.value !== raw) { this.value = raw; this.setSelectionRange(pos-1,pos-1); }
+      const caret = this.selectionStart;
+      const before = this.value.slice(0, caret).replace(/\./g, '');
+      // Chỉ giữ số
+      const raw = this.value.replace(/[^0-9]/g, '');
+      if (!raw) { this.value = ''; return; }
+      // Format có dấu chấm
+      const formatted = parseInt(raw).toLocaleString('vi-VN');
+      this.value = formatted;
+      // Giữ vị trí con trỏ đúng chỗ
+      const dotsBefore = (this.value.slice(0, this.value.length - (raw.length - before.length)).match(/\./g) || []).length;
+      const newCaret = before.length + dotsBefore;
+      try { this.setSelectionRange(newCaret, newCaret); } catch(e) {}
     });
+
+    // Khi blur: đảm bảo format đúng
+    el.addEventListener('blur', function() {
+      const raw = this.value.replace(/[^0-9]/g, '');
+      const v = parseInt(raw) || 0;
+      this.value = v > 0 ? v.toLocaleString('vi-VN') : '0';
+    });
+
+    // Khi focus: select all để dễ xóa nhập lại
+    el.addEventListener('focus', function() {
+      setTimeout(() => this.select(), 30);
+    });
+
+    // Giá trị ban đầu = 0 → hiện 0
+    if (!el.value || el.value === '0') el.value = '0';
   });
 }
 
