@@ -157,6 +157,21 @@
   .sq-name { flex:1; font-size:13px; font-weight:600; color:var(--text); }
   .sq-meta { font-size:11px; color:var(--text-muted); }
   .sq-actions { display:flex; gap:6px; }
+  /* Modal sửa sản phẩm trong báo giá đã lưu */
+  .edit-quote-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:99999; align-items:center; justify-content:center; }
+  .edit-quote-modal.open { display:flex; }
+  .edit-quote-box { background:#fff; border-radius:16px; padding:24px 28px; width:600px; max-width:96vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25); }
+  .edit-quote-box h3 { font-size:16px; font-weight:700; color:var(--green); margin-bottom:16px; }
+  .eq-table { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:16px; }
+  .eq-table th { background:var(--green-soft); color:var(--green); padding:8px 10px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; }
+  .eq-table td { padding:7px 10px; border-bottom:1px solid var(--border); }
+  .eq-table tr:hover td { background:var(--cream); cursor:pointer; }
+  .eq-table tr.eq-selected td { background:var(--success-bg); }
+  .eq-field-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .eq-field { display:flex; flex-direction:column; gap:4px; }
+  .eq-field label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+  .eq-field input { height:38px; border:1.5px solid var(--border); border-radius:8px; padding:0 10px; font-size:13px; font-family:inherit; background:var(--cream); }
+  .eq-field input:focus { outline:none; border-color:var(--green); background:#fff; }
 
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
   .modal-overlay.open { display: flex; }
@@ -551,11 +566,16 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
       <div class="section-title" style="margin:0">👤 Thông tin khách & Lưu báo giá</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="newQuote()">✨ Tạo báo giá mới</button>
         <button class="btn btn-primary" onclick="saveQuote()">💾 Lưu báo giá</button>
         <button class="btn btn-secondary" onclick="toggleSavedQuotes()">📂 Báo giá đã lưu</button>
       </div>
     </div>
-    <div class="form-grid three">
+    <div class="form-grid four">
+      <div class="form-group">
+        <label>Tên báo giá</label>
+        <input type="text" id="multi-quote-name" placeholder="VD: BG nhà chị Lan" value="Báo giá mới">
+      </div>
       <div class="form-group">
         <label>Tên khách hàng</label>
         <input type="text" id="multi-customer-name" placeholder="VD: Anh Hùng" oninput="syncCustomerToQuote()">
@@ -565,8 +585,8 @@
         <input type="text" id="multi-customer-phone" placeholder="VD: 0912 345 678" oninput="syncCustomerToQuote()">
       </div>
       <div class="form-group">
-        <label>Tên báo giá</label>
-        <input type="text" id="multi-quote-name" placeholder="VD: BG nhà chị Lan" value="Báo giá">
+        <label>Địa chỉ khách hàng</label>
+        <input type="text" id="multi-customer-addr" placeholder="VD: 123 Lê Lợi, Hải Dương" oninput="syncCustomerToQuote()">
       </div>
     </div>
     <!-- Panel báo giá đã lưu -->
@@ -1944,6 +1964,62 @@ ${notesHTML ? '<div class="notes-box"><div class="notes-title">Ghi chú</div>' +
          onkeydown="if(event.key==='Escape')closeQuoteDDFixed()">
   <div class="qdd-list" id="quoteDDList"></div>
 </div>
+
+<!-- MODAL SỬA SẢN PHẨM TRONG BÁO GIÁ ĐÃ LƯU -->
+<div class="edit-quote-modal" id="editQuoteModal">
+  <div class="edit-quote-box">
+    <h3 id="editModalTitle">✏️ Sửa báo giá</h3>
+
+    <!-- Thông tin khách -->
+    <div class="eq-field-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="eq-field"><label>Tên khách</label><input type="text" id="eq-cust-name" placeholder="Tên khách hàng"></div>
+      <div class="eq-field"><label>Điện thoại</label><input type="text" id="eq-cust-phone" placeholder="SĐT"></div>
+      <div class="eq-field"><label>Địa chỉ</label><input type="text" id="eq-cust-addr" placeholder="Địa chỉ"></div>
+    </div>
+
+    <!-- Danh sách sản phẩm — bấm để chọn và sửa -->
+    <div class="section-title" style="margin-bottom:8px;">Bấm vào sản phẩm để sửa thông số</div>
+    <div style="overflow-x:auto;margin-bottom:14px;">
+      <table class="eq-table" id="eqProductList">
+        <thead><tr><th>#</th><th>Tên sản phẩm</th><th>Dài×Cao</th><th>SL</th><th>Giá bán/m²</th><th>Thành tiền</th></tr></thead>
+        <tbody id="eqProductBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Form sửa sản phẩm đã chọn -->
+    <div id="eqEditForm" style="display:none;background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div class="section-title" style="margin-bottom:10px;" id="eqEditFormTitle">Sửa thông số</div>
+      <div class="eq-field-row">
+        <div class="eq-field"><label>Chiều dài (m)</label><input type="number" id="eq-w" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Chiều cao (m)</label><input type="number" id="eq-h" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Số lượng</label><input type="number" id="eq-qty" value="1" min="1" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Giá bán / m² (đ)</label><input type="number" id="eq-sell" placeholder="0" oninput="eqCalc()"></div>
+      </div>
+      <div class="eq-field-row">
+        <div class="eq-field"><label>VC về kho (đ)</label><input type="number" id="eq-shipIn" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>VC cho khách (đ)</label><input type="number" id="eq-shipOut" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="number" id="eq-install" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Chi phí khác (đ)</label><input type="number" id="eq-other" value="0" oninput="eqCalc()"></div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap;">
+        <span>Diện tích: <strong id="eq-area-show">0</strong> m²</span>
+        <span>Thành tiền: <strong id="eq-total-show" style="color:var(--green)">0đ</strong></span>
+        <span>Lợi nhuận: <strong id="eq-profit-show">0đ</strong></span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-primary btn-sm" onclick="eqSaveItem()">✅ Lưu thay đổi dòng này</button>
+        <button class="btn btn-danger btn-sm" onclick="eqDeleteItem()">🗑 Xóa dòng này</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('eqEditForm').style.display='none'">✕ Đóng</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="eqSaveAll()">💾 Lưu tất cả thay đổi</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>`;
 
@@ -2047,8 +2123,9 @@ function saveQuote() {
   const custP   = document.getElementById('multi-customer-phone').value.trim();
   const quotes  = getSavedQuotes();
   const existing = quotes.findIndex(q => q.name === name);
+  const custA = document.getElementById('multi-customer-addr').value.trim();
   const entry = {
-    name, custName: custN, custPhone: custP,
+    name, custName: custN, custPhone: custP, custAddr: custA,
     items: JSON.parse(JSON.stringify(multiItems)),
     savedAt: new Date().toLocaleString('vi-VN'),
     total: multiItems.reduce((s,it) => s + it.rev, 0),
@@ -2073,8 +2150,9 @@ function loadQuote(idx) {
   if (multiItems.length && !confirm('Tải báo giá "' + q.name + '"? Danh sách hiện tại sẽ bị thay thế.')) return;
   multiItems = JSON.parse(JSON.stringify(q.items));
   document.getElementById('multi-quote-name').value = q.name;
-  document.getElementById('multi-customer-name').value = q.custName || '';
+  document.getElementById('multi-customer-name').value  = q.custName  || '';
   document.getElementById('multi-customer-phone').value = q.custPhone || '';
+  document.getElementById('multi-customer-addr').value  = q.custAddr  || '';
   renderMulti();
   syncCustomerToQuote();
   alert('✅ Đã tải báo giá "' + q.name + '"!');
@@ -2093,15 +2171,65 @@ function sendQuoteToTab(idx) {
   const quotes = getSavedQuotes();
   if (!quotes[idx]) return;
   const q = quotes[idx];
-  // Load vào multi tab
-  multiItems = JSON.parse(JSON.stringify(q.items));
-  document.getElementById('multi-customer-name').value = q.custName || '';
-  document.getElementById('multi-customer-phone').value = q.custPhone || '';
-  renderMulti();
-  // Chuyển sang tab báo giá cho khách và sync thông tin
-  syncCustomerToQuote();
-  const quoteBtn = document.querySelector('.tab-btn[onclick*="quote"]');
+
+  // Chuyển sang tab Báo Giá Cho Khách
+  const quoteBtn = document.querySelector('.tab-btn[onclick*=\'quote\']');
   if (quoteBtn) switchTab('quote', quoteBtn);
+
+  // Xóa bảng cũ
+  document.getElementById('quoteBody').innerHTML = '';
+  document.getElementById('noteRows').innerHTML = '';
+  document.getElementById('quoteTotal').textContent = '0đ';
+  quoteRowCounter = 0; noteRowCounter = 0;
+
+  // Điền tên báo giá và ngày
+  document.getElementById('bq-title').value = q.name || 'BÁO GIÁ HÀNG HÓA';
+  setTodayDate();
+
+  // Điền thông tin khách vào phần "Thông tin cửa hàng" — dùng field ghi chú
+  // Thực ra ta tạo 1 ghi chú dòng đầu với thông tin khách
+  // Thêm từng sản phẩm vào bảng báo giá
+  setTimeout(() => {
+    q.items.forEach(it => {
+      addQuoteRow();
+      const rowId = 'qr' + quoteRowCounter;
+      // Tên SP
+      const disp = document.getElementById('qdd-' + rowId + '-display');
+      if (disp) { disp.textContent = it.name; disp.classList.remove('placeholder-text'); }
+      // Chất liệu
+      const matEl = document.getElementById('qmat-' + rowId);
+      if (matEl) matEl.value = it.mat || '';
+      // Đơn giá
+      const priceEl = document.getElementById('qprice-' + rowId);
+      if (priceEl) priceEl.value = it.sellPrice || 0;
+      // Kích thước
+      const wEl = document.getElementById('qw-' + rowId);
+      const hEl = document.getElementById('qh-' + rowId);
+      if (wEl) wEl.value = it.w || 0;
+      if (hEl) hEl.value = it.h || 0;
+      // Số lượng
+      const qEl = document.getElementById('qqty-' + rowId);
+      if (qEl) qEl.value = it.qty || 1;
+      // Tính DT & thành tiền
+      recalcRowArea(rowId);
+    });
+
+    // Thêm ghi chú thông tin khách
+    if (q.custName || q.custPhone || q.custAddr) {
+      addNoteRow();
+      const noteInp = document.querySelector('#noteRows .note-row:last-child input');
+      if (noteInp) {
+        const parts = [];
+        if (q.custName)  parts.push('KH: ' + q.custName);
+        if (q.custPhone) parts.push('ĐT: ' + q.custPhone);
+        if (q.custAddr)  parts.push('Địa chỉ: ' + q.custAddr);
+        noteInp.value = parts.join(' | ');
+      }
+    }
+
+    recalcQuoteTotal();
+    alert('✅ Đã chuyển báo giá "' + q.name + '" sang tab Báo Giá Cho Khách!');
+  }, 200);
 }
 
 function toggleSavedQuotes() {
@@ -2120,14 +2248,14 @@ function renderSavedQuotes() {
   }
   list.innerHTML = quotes.map((q, i) => `
     <div class="sq-item">
-      <div>
-        <div class="sq-name">${q.name}${q.custName ? ' — ' + q.custName : ''}</div>
-        <div class="sq-meta">${q.items.length} sản phẩm · ${fmt(q.total)} · ${q.savedAt}</div>
+      <div style="flex:1;cursor:pointer;" onclick="openEditModal(${i})" title="Bấm để xem & sửa chi tiết">
+        <div class="sq-name">✏️ ${q.name}${q.custName ? ' — ' + q.custName : ''}${q.custPhone ? ' · ' + q.custPhone : ''}</div>
+        <div class="sq-meta">${q.items.length} sản phẩm · Tổng: ${fmt(q.total)} · ${q.savedAt}</div>
+        <div class="sq-meta" style="margin-top:2px;">${q.items.slice(0,3).map(it=>it.name).join(', ')}${q.items.length>3 ? '...' : ''}</div>
       </div>
       <div class="sq-actions">
-        <button class="btn btn-secondary btn-sm" onclick="loadQuote(${i})">📂 Tải</button>
-        <button class="btn btn-gold btn-sm" onclick="sendQuoteToTab(${i})" title="Mở trong tab Báo Giá Cho Khách">📄 Báo giá</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteQuote(${i})">🗑</button>
+        <button class="btn btn-gold btn-sm" onclick="event.stopPropagation();sendQuoteToTab(${i})" title="Mở trong tab Báo Giá Cho Khách">📄 Báo giá</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteQuote(${i})">🗑</button>
       </div>
     </div>`).join('');
 }
@@ -2135,14 +2263,168 @@ function renderSavedQuotes() {
 // Đồng bộ tên khách → tab Báo Giá Cho Khách
 function syncCustomerToQuote() {
   const name  = document.getElementById('multi-customer-name').value.trim();
-  const phone = document.getElementById('multi-customer-phone').value.trim();
   const titleEl = document.getElementById('bq-title');
   const quoteName = document.getElementById('multi-quote-name').value.trim();
-  // Cập nhật tên báo giá nếu có tên khách
   if (titleEl && name) {
-    titleEl.value = quoteName + (name ? ' - ' + name : '');
+    titleEl.value = quoteName + ' - ' + name;
+  } else if (titleEl && quoteName) {
+    titleEl.value = quoteName;
   }
 }
+
+// Tạo báo giá mới — xóa trắng form
+function newQuote() {
+  if (multiItems.length && !confirm('Tạo báo giá mới? Danh sách hiện tại sẽ bị xóa.')) return;
+  multiItems = [];
+  renderMulti();
+  document.getElementById('multi-quote-name').value = 'Báo giá mới';
+  document.getElementById('multi-customer-name').value = '';
+  document.getElementById('multi-customer-phone').value = '';
+  document.getElementById('multi-customer-addr').value = '';
+  // Reset tab 2 form inputs
+  const d2 = document.getElementById('sd2-display');
+  if (d2) { d2.textContent = '— Tìm kiếm sản phẩm —'; d2.classList.add('placeholder-text'); }
+  document.getElementById('m_w').value = '';
+  document.getElementById('m_h').value = '';
+  document.getElementById('m_qty').value = 1;
+  document.getElementById('m_sell').value = '';
+  ['m_shipIn','m_shipOut','m_install','m_other'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '0';
+  });
+}
+
+// ── Modal sửa báo giá đã lưu ────────────────────────────────
+let _editModalIdx = null;
+let _editItemIdx  = null;
+let _editItems    = [];
+
+function openEditModal(quoteIdx) {
+  _editModalIdx = quoteIdx;
+  _editItemIdx  = null;
+  const quotes = getSavedQuotes();
+  const q = quotes[quoteIdx];
+  if (!q) return;
+  _editItems = JSON.parse(JSON.stringify(q.items));
+
+  document.getElementById('editModalTitle').textContent = '✏️ Sửa báo giá: ' + q.name;
+  document.getElementById('eq-cust-name').value  = q.custName  || '';
+  document.getElementById('eq-cust-phone').value = q.custPhone || '';
+  document.getElementById('eq-cust-addr').value  = q.custAddr  || '';
+  renderEqProducts();
+  document.getElementById('eqEditForm').style.display = 'none';
+  document.getElementById('editQuoteModal').classList.add('open');
+}
+
+function closeEditModal() {
+  document.getElementById('editQuoteModal').classList.remove('open');
+  _editModalIdx = null; _editItemIdx = null; _editItems = [];
+}
+
+function renderEqProducts() {
+  const body = document.getElementById('eqProductBody');
+  if (!body) return;
+  body.innerHTML = _editItems.map((it, i) => `
+    <tr onclick="openEqItemForm(${i})" class="${_editItemIdx===i?'eq-selected':''}">
+      <td>${i+1}</td>
+      <td>${it.name}</td>
+      <td>${it.w}×${it.h}</td>
+      <td>${it.qty}</td>
+      <td>${fmt(it.sellPrice)}</td>
+      <td style="font-weight:700;color:var(--green)">${fmt(it.rev)}</td>
+    </tr>`).join('');
+}
+
+function openEqItemForm(itemIdx) {
+  _editItemIdx = itemIdx;
+  const it = _editItems[itemIdx];
+  document.getElementById('eqEditFormTitle').textContent = '✏️ Đang sửa: ' + it.name;
+  document.getElementById('eq-w').value       = it.w       || 0;
+  document.getElementById('eq-h').value       = it.h       || 0;
+  document.getElementById('eq-qty').value     = it.qty     || 1;
+  document.getElementById('eq-sell').value    = it.sellPrice || 0;
+  document.getElementById('eq-shipIn').value  = it.shipIn  || 0;
+  document.getElementById('eq-shipOut').value = it.shipOut || 0;
+  document.getElementById('eq-install').value = it.install || 0;
+  document.getElementById('eq-other').value   = it.other   || 0;
+  document.getElementById('eqEditForm').style.display = 'block';
+  renderEqProducts();
+  eqCalc();
+}
+
+function eqCalc() {
+  const w    = parseFloat(document.getElementById('eq-w').value)       || 0;
+  const h    = parseFloat(document.getElementById('eq-h').value)       || 0;
+  const qty  = parseInt(document.getElementById('eq-qty').value)       || 1;
+  const sell = parseFloat(document.getElementById('eq-sell').value)    || 0;
+  const si   = parseFloat(document.getElementById('eq-shipIn').value)  || 0;
+  const so   = parseFloat(document.getElementById('eq-shipOut').value) || 0;
+  const ins  = parseFloat(document.getElementById('eq-install').value) || 0;
+  const oth  = parseFloat(document.getElementById('eq-other').value)   || 0;
+  const area   = w * h;
+  const extra  = si + so + ins + oth;
+  const imp    = _editItems[_editItemIdx] ? _editItems[_editItemIdx].importPrice : 0;
+  const cost   = imp * area * qty + extra;
+  const rev    = sell * area * qty;
+  const profit = rev - cost;
+  document.getElementById('eq-area-show').textContent   = area.toFixed(2);
+  document.getElementById('eq-total-show').textContent  = fmt(rev);
+  document.getElementById('eq-profit-show').textContent = fmt(profit);
+  document.getElementById('eq-profit-show').style.color = profit >= 0 ? 'var(--success)' : 'var(--red)';
+}
+
+function eqSaveItem() {
+  if (_editItemIdx === null) return;
+  const it = _editItems[_editItemIdx];
+  const w    = parseFloat(document.getElementById('eq-w').value)       || 0;
+  const h    = parseFloat(document.getElementById('eq-h').value)       || 0;
+  const qty  = parseInt(document.getElementById('eq-qty').value)       || 1;
+  const sell = parseFloat(document.getElementById('eq-sell').value)    || 0;
+  const si   = parseFloat(document.getElementById('eq-shipIn').value)  || 0;
+  const so   = parseFloat(document.getElementById('eq-shipOut').value) || 0;
+  const ins  = parseFloat(document.getElementById('eq-install').value) || 0;
+  const oth  = parseFloat(document.getElementById('eq-other').value)   || 0;
+  const area    = w * h;
+  const extra   = si + so + ins + oth;
+  const cost    = it.importPrice * area * qty + extra;
+  const rev     = sell * area * qty;
+  const profit  = rev - cost;
+  const margin  = rev > 0 ? profit/rev*100 : 0;
+  _editItems[_editItemIdx] = { ...it, w, h, qty, area, sellPrice:sell, shipIn:si, shipOut:so, install:ins, other:oth, extraCost:extra, totalCost:cost, rev, profit, margin };
+  renderEqProducts();
+  document.getElementById('eqEditForm').style.display = 'none';
+  _editItemIdx = null;
+}
+
+function eqDeleteItem() {
+  if (_editItemIdx === null) return;
+  if (!confirm('Xóa sản phẩm "' + _editItems[_editItemIdx].name + '" khỏi báo giá này?')) return;
+  _editItems.splice(_editItemIdx, 1);
+  _editItemIdx = null;
+  renderEqProducts();
+  document.getElementById('eqEditForm').style.display = 'none';
+}
+
+function eqSaveAll() {
+  if (_editModalIdx === null) return;
+  const quotes = getSavedQuotes();
+  const q = quotes[_editModalIdx];
+  q.items     = _editItems;
+  q.custName  = document.getElementById('eq-cust-name').value.trim();
+  q.custPhone = document.getElementById('eq-cust-phone').value.trim();
+  q.custAddr  = document.getElementById('eq-cust-addr').value.trim();
+  q.total     = _editItems.reduce((s,it) => s+it.rev, 0);
+  q.savedAt   = new Date().toLocaleString('vi-VN');
+  localStorage.setItem(SAVED_QUOTES_KEY, JSON.stringify(quotes));
+  renderSavedQuotes();
+  closeEditModal();
+  alert('✅ Đã lưu các thay đổi!');
+}
+
+// Đóng modal khi click ra ngoài
+document.getElementById('editQuoteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
 
 // =========== GOOGLE SHEETS SYNC ENGINE ===========
 const _apiReady = () => API_URL && !API_URL.includes('PASTE_YOUR');
@@ -2426,5 +2708,61 @@ function doLogout() {
          onkeydown="if(event.key==='Escape')closeQuoteDDFixed()">
   <div class="qdd-list" id="quoteDDList"></div>
 </div>
+
+<!-- MODAL SỬA SẢN PHẨM TRONG BÁO GIÁ ĐÃ LƯU -->
+<div class="edit-quote-modal" id="editQuoteModal">
+  <div class="edit-quote-box">
+    <h3 id="editModalTitle">✏️ Sửa báo giá</h3>
+
+    <!-- Thông tin khách -->
+    <div class="eq-field-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="eq-field"><label>Tên khách</label><input type="text" id="eq-cust-name" placeholder="Tên khách hàng"></div>
+      <div class="eq-field"><label>Điện thoại</label><input type="text" id="eq-cust-phone" placeholder="SĐT"></div>
+      <div class="eq-field"><label>Địa chỉ</label><input type="text" id="eq-cust-addr" placeholder="Địa chỉ"></div>
+    </div>
+
+    <!-- Danh sách sản phẩm — bấm để chọn và sửa -->
+    <div class="section-title" style="margin-bottom:8px;">Bấm vào sản phẩm để sửa thông số</div>
+    <div style="overflow-x:auto;margin-bottom:14px;">
+      <table class="eq-table" id="eqProductList">
+        <thead><tr><th>#</th><th>Tên sản phẩm</th><th>Dài×Cao</th><th>SL</th><th>Giá bán/m²</th><th>Thành tiền</th></tr></thead>
+        <tbody id="eqProductBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Form sửa sản phẩm đã chọn -->
+    <div id="eqEditForm" style="display:none;background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div class="section-title" style="margin-bottom:10px;" id="eqEditFormTitle">Sửa thông số</div>
+      <div class="eq-field-row">
+        <div class="eq-field"><label>Chiều dài (m)</label><input type="number" id="eq-w" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Chiều cao (m)</label><input type="number" id="eq-h" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Số lượng</label><input type="number" id="eq-qty" value="1" min="1" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Giá bán / m² (đ)</label><input type="number" id="eq-sell" placeholder="0" oninput="eqCalc()"></div>
+      </div>
+      <div class="eq-field-row">
+        <div class="eq-field"><label>VC về kho (đ)</label><input type="number" id="eq-shipIn" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>VC cho khách (đ)</label><input type="number" id="eq-shipOut" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="number" id="eq-install" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Chi phí khác (đ)</label><input type="number" id="eq-other" value="0" oninput="eqCalc()"></div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap;">
+        <span>Diện tích: <strong id="eq-area-show">0</strong> m²</span>
+        <span>Thành tiền: <strong id="eq-total-show" style="color:var(--green)">0đ</strong></span>
+        <span>Lợi nhuận: <strong id="eq-profit-show">0đ</strong></span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-primary btn-sm" onclick="eqSaveItem()">✅ Lưu thay đổi dòng này</button>
+        <button class="btn btn-danger btn-sm" onclick="eqDeleteItem()">🗑 Xóa dòng này</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('eqEditForm').style.display='none'">✕ Đóng</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="eqSaveAll()">💾 Lưu tất cả thay đổi</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
