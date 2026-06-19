@@ -125,6 +125,10 @@
   .items-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
   .items-table tr:last-child td { border-bottom: none; }
   .items-table tr:hover td { background: var(--cream); }
+  .items-table tr.dragging { opacity: 0.4; }
+  .items-table tr.drag-over td { border-top: 2px solid var(--green); }
+  .drag-handle { cursor: grab; color: var(--text-muted); font-size: 16px; padding: 0 4px; user-select: none; }
+  .drag-handle:active { cursor: grabbing; }
 
   .db-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .db-table th { background: var(--green); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 500; }
@@ -146,6 +150,13 @@
 
   .empty-state { text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px; }
   .tip { background: var(--cream); border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+  /* Saved quotes panel */
+  .sq-item { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); transition:background 0.1s; }
+  .sq-item:hover { background:var(--cream); }
+  .sq-item:last-child { border-bottom:none; }
+  .sq-name { flex:1; font-size:13px; font-weight:600; color:var(--text); }
+  .sq-meta { font-size:11px; color:var(--text-muted); }
+  .sq-actions { display:flex; gap:6px; }
 
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
   .modal-overlay.open { display: flex; }
@@ -458,7 +469,7 @@
   </div>
   <div class="card">
     <div class="section-title">4 · Đơn giá bán (VNĐ/m²-md) — kéo thanh trượt hoặc nhập thủ công</div>
-    <input type="number" id="sellPriceInput" style="width:100%;font-size:22px;font-weight:600;text-align:center;color:var(--green);border:2px solid var(--green);border-radius:10px;height:52px;background:#fff;" placeholder="0" oninput="onPriceInput()">
+    <input type="text" inputmode="numeric" id="sellPriceInput" style="width:100%;font-size:22px;font-weight:600;text-align:center;color:var(--green);border:2px solid var(--green);border-radius:10px;height:52px;background:#fff;" placeholder="0" oninput="onPriceInput()">
     <div style="margin-top:12px;">
       <input type="range" id="priceSlider" min="0" max="2000000" step="1000" value="0" oninput="onSliderMove()">
       <div class="slider-values"><span>0đ</span><span>1,000,000đ</span><span>2,000,000đ</span></div>
@@ -535,10 +546,43 @@
       <div class="form-group" style="justify-content:flex-end;"><label>&nbsp;</label><button class="btn btn-primary" style="height:40px;" onclick="addItem()">+ Thêm vào danh sách</button></div>
     </div>
   </div>
+  <!-- THÔNG TIN KHÁCH HÀNG + LƯU BÁO GIÁ -->
+  <div class="card" id="multiCustomerCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <div class="section-title" style="margin:0">👤 Thông tin khách & Lưu báo giá</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveQuote()">💾 Lưu báo giá</button>
+        <button class="btn btn-secondary" onclick="toggleSavedQuotes()">📂 Báo giá đã lưu</button>
+      </div>
+    </div>
+    <div class="form-grid three">
+      <div class="form-group">
+        <label>Tên khách hàng</label>
+        <input type="text" id="multi-customer-name" placeholder="VD: Anh Hùng" oninput="syncCustomerToQuote()">
+      </div>
+      <div class="form-group">
+        <label>Số điện thoại</label>
+        <input type="text" id="multi-customer-phone" placeholder="VD: 0912 345 678" oninput="syncCustomerToQuote()">
+      </div>
+      <div class="form-group">
+        <label>Tên báo giá</label>
+        <input type="text" id="multi-quote-name" placeholder="VD: BG nhà chị Lan" value="Báo giá">
+      </div>
+    </div>
+    <!-- Panel báo giá đã lưu -->
+    <div id="savedQuotesPanel" style="display:none;margin-top:14px;">
+      <div class="section-title" style="margin-bottom:10px;">📋 Danh sách báo giá đã lưu</div>
+      <div id="savedQuotesList" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
       <div class="section-title" style="margin:0">Danh sách sản phẩm trong báo giá</div>
-      <button class="btn btn-danger btn-sm" onclick="clearItems()">🗑 Xóa tất cả</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="refreshPrices()" title="Cập nhật giá nhập theo dữ liệu mới nhất từ Sheet">🔄 Cập nhật giá</button>
+        <button class="btn btn-danger btn-sm" onclick="clearItems()">🗑 Xóa tất cả</button>
+      </div>
     </div>
     <div class="col-picker-wrap">
       <button class="col-picker-toggle" onclick="toggleColPicker()">⚙️ Chọn cột hiển thị</button>
@@ -844,7 +888,8 @@ const fmtNum = n => Math.round(n).toLocaleString('vi-VN'); // Có dấu chấm, 
 // Format input tiền: hiện dấu chấm khi blur, số thuần khi focus
 function formatMoneyInputs() {
   const moneyIds = ['shipIn','shipOut','install','other',
-                    'm_shipIn','m_shipOut','m_install','m_other','m_sell'];
+                    'm_shipIn','m_shipOut','m_install','m_other','m_sell',
+                    'sellPriceInput'];
   moneyIds.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -979,7 +1024,7 @@ function selectProduct(id, idx) {
     const slider = document.getElementById('priceSlider');
     slider.max = Math.max(2000000, p.price * 4);
     slider.value = Math.round(p.price * 1.6);
-    document.getElementById('sellPriceInput').value = Math.round(p.price * 1.6);
+    document.getElementById('sellPriceInput').value = Math.round(p.price * 1.6).toLocaleString('vi-VN');
     calc();
   } else if (id === 'sd2') {
     document.getElementById('m_import').value = Math.round(p.price);
@@ -1089,9 +1134,10 @@ function calcArea() {
   document.getElementById('area').value = (w * h).toFixed(4);
   calc();
 }
-function onSliderMove() { document.getElementById('sellPriceInput').value = document.getElementById('priceSlider').value; calc(); }
+function onSliderMove() { const v = parseInt(document.getElementById('priceSlider').value)||0; document.getElementById('sellPriceInput').value = v > 0 ? v.toLocaleString('vi-VN') : '0'; calc(); }
 function onPriceInput() {
-  const v = parseFloat(document.getElementById('sellPriceInput').value) || 0;
+  const raw = (document.getElementById('sellPriceInput').value || '').replace(/[^0-9]/g,'');
+  const v = parseInt(raw) || 0;
   const slider = document.getElementById('priceSlider');
   if (v > parseFloat(slider.max)) slider.max = v * 1.5;
   slider.value = v; calc();
@@ -1105,7 +1151,7 @@ function getCurrentCalcData() {
   const shipOut = getMoneyVal('shipOut');
   const install = getMoneyVal('install');
   const other   = getMoneyVal('other');
-  const sellPrice = parseFloat(document.getElementById('sellPriceInput').value) || 0;
+  const sellPrice = parseInt((document.getElementById('sellPriceInput').value||'0').replace(/[^0-9]/g,'')) || 0;
   const extraCost = shipIn + shipOut + install + other;
   const totalCost = importPrice * area * qty + extraCost;
   const revenue = sellPrice * area * qty;
@@ -1192,8 +1238,53 @@ function addItem() {
   multiItems.push({ name: p.name, w, h, area, qty, importPrice, shipIn, shipOut, install, other, extraCost, totalCost, sellPrice: sell, rev, profit, margin });
   renderMulti();
 }
+// ── Drag & drop sắp xếp sản phẩm ──────────────────────────
+let _dragIdx = null;
+function dragStart(e, i) { _dragIdx = i; e.currentTarget.closest('tr').classList.add('dragging'); }
+function dragOver(e, i) {
+  e.preventDefault();
+  document.querySelectorAll('#multiBody tr').forEach(r => r.classList.remove('drag-over'));
+  const rows = document.querySelectorAll('#multiBody tr');
+  if (rows[i]) rows[i].classList.add('drag-over');
+}
+function dragDrop(e, i) {
+  e.preventDefault();
+  if (_dragIdx === null || _dragIdx === i) return;
+  const moved = multiItems.splice(_dragIdx, 1)[0];
+  multiItems.splice(i, 0, moved);
+  _dragIdx = null;
+  renderMulti();
+}
+function dragEnd(e) {
+  _dragIdx = null;
+  document.querySelectorAll('#multiBody tr').forEach(r => { r.classList.remove('dragging'); r.classList.remove('drag-over'); });
+}
+
 function removeItem(i) { multiItems.splice(i, 1); renderMulti(); }
 function clearItems() { multiItems = []; renderMulti(); }
+
+// Cập nhật giá nhập của tất cả sản phẩm theo PRODUCTS hiện tại
+function refreshPrices() {
+  let updated = 0;
+  multiItems = multiItems.map(it => {
+    const found = PRODUCTS.find(p => p.name === it.name);
+    if (found && Math.round(found.price) !== it.importPrice) {
+      const newImport = Math.round(found.price);
+      const area = it.area, qty = it.qty;
+      const extraCost = it.shipIn + it.shipOut + it.install + it.other;
+      const totalCost = newImport * area * qty + extraCost;
+      const rev = it.sellPrice * area * qty;
+      const profit = rev - totalCost;
+      const margin = rev > 0 ? profit / rev * 100 : 0;
+      updated++;
+      return { ...it, importPrice: newImport, totalCost, rev, profit, margin };
+    }
+    return it;
+  });
+  renderMulti();
+  if (updated > 0) alert('✅ Đã cập nhật giá nhập cho ' + updated + ' sản phẩm!');
+  else alert('ℹ️ Tất cả sản phẩm đã có giá nhập mới nhất, không có thay đổi.');
+}
 function renderMulti() {
   const tbody = document.getElementById('multiBody');
   if (!multiItems.length) {
@@ -1203,7 +1294,12 @@ function renderMulti() {
   tbody.innerHTML = multiItems.map((it, i) => {
     const pColor = it.profit < 0 ? 'var(--red)' : 'var(--success)';
     return `<tr>
-      <td class="mc-0">${i+1}</td>
+      <td class="mc-0" style="display:flex;align-items:center;gap:4px;">
+        <span class="drag-handle" draggable="true"
+              ondragstart="dragStart(event,${i})"
+              ondragover="dragOver(event,${i})"
+              ondrop="dragDrop(event,${i})"
+              ondragend="dragEnd(event)">⠿</span>${i+1}</td>
       <td class="mc-1">${it.name}</td>
       <td class="mc-2">${it.w}×${it.h}</td>
       <td class="mc-3">${it.area.toFixed(2)}</td>
@@ -1937,6 +2033,117 @@ function applyColVisibility() {
   });
 }
 
+// =========== SAVE / LOAD QUOTES ===========
+const SAVED_QUOTES_KEY = 'nttt_saved_quotes';
+
+function getSavedQuotes() {
+  try { return JSON.parse(localStorage.getItem(SAVED_QUOTES_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function saveQuote() {
+  if (!multiItems.length) { alert('⚠️ Chưa có sản phẩm nào trong danh sách!'); return; }
+  const name    = document.getElementById('multi-quote-name').value.trim() || 'Báo giá';
+  const custN   = document.getElementById('multi-customer-name').value.trim();
+  const custP   = document.getElementById('multi-customer-phone').value.trim();
+  const quotes  = getSavedQuotes();
+  const existing = quotes.findIndex(q => q.name === name);
+  const entry = {
+    name, custName: custN, custPhone: custP,
+    items: JSON.parse(JSON.stringify(multiItems)),
+    savedAt: new Date().toLocaleString('vi-VN'),
+    total: multiItems.reduce((s,it) => s + it.rev, 0),
+  };
+  if (existing >= 0) {
+    if (!confirm('Đã có báo giá tên "' + name + '". Ghi đè?')) return;
+    quotes[existing] = entry;
+  } else {
+    quotes.unshift(entry);
+  }
+  try {
+    localStorage.setItem(SAVED_QUOTES_KEY, JSON.stringify(quotes.slice(0, 50)));
+    renderSavedQuotes();
+    alert('✅ Đã lưu báo giá "' + name + '"!');
+  } catch(e) { alert('❌ Lỗi lưu: dữ liệu quá lớn'); }
+}
+
+function loadQuote(idx) {
+  const quotes = getSavedQuotes();
+  if (!quotes[idx]) return;
+  const q = quotes[idx];
+  if (multiItems.length && !confirm('Tải báo giá "' + q.name + '"? Danh sách hiện tại sẽ bị thay thế.')) return;
+  multiItems = JSON.parse(JSON.stringify(q.items));
+  document.getElementById('multi-quote-name').value = q.name;
+  document.getElementById('multi-customer-name').value = q.custName || '';
+  document.getElementById('multi-customer-phone').value = q.custPhone || '';
+  renderMulti();
+  syncCustomerToQuote();
+  alert('✅ Đã tải báo giá "' + q.name + '"!');
+}
+
+function deleteQuote(idx) {
+  const quotes = getSavedQuotes();
+  if (!quotes[idx]) return;
+  if (!confirm('Xóa báo giá "' + quotes[idx].name + '"?')) return;
+  quotes.splice(idx, 1);
+  localStorage.setItem(SAVED_QUOTES_KEY, JSON.stringify(quotes));
+  renderSavedQuotes();
+}
+
+function sendQuoteToTab(idx) {
+  const quotes = getSavedQuotes();
+  if (!quotes[idx]) return;
+  const q = quotes[idx];
+  // Load vào multi tab
+  multiItems = JSON.parse(JSON.stringify(q.items));
+  document.getElementById('multi-customer-name').value = q.custName || '';
+  document.getElementById('multi-customer-phone').value = q.custPhone || '';
+  renderMulti();
+  // Chuyển sang tab báo giá cho khách và sync thông tin
+  syncCustomerToQuote();
+  const quoteBtn = document.querySelector('.tab-btn[onclick*="quote"]');
+  if (quoteBtn) switchTab('quote', quoteBtn);
+}
+
+function toggleSavedQuotes() {
+  const panel = document.getElementById('savedQuotesPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  renderSavedQuotes();
+}
+
+function renderSavedQuotes() {
+  const list = document.getElementById('savedQuotesList');
+  if (!list) return;
+  const quotes = getSavedQuotes();
+  if (!quotes.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Chưa có báo giá nào được lưu</div>';
+    return;
+  }
+  list.innerHTML = quotes.map((q, i) => `
+    <div class="sq-item">
+      <div>
+        <div class="sq-name">${q.name}${q.custName ? ' — ' + q.custName : ''}</div>
+        <div class="sq-meta">${q.items.length} sản phẩm · ${fmt(q.total)} · ${q.savedAt}</div>
+      </div>
+      <div class="sq-actions">
+        <button class="btn btn-secondary btn-sm" onclick="loadQuote(${i})">📂 Tải</button>
+        <button class="btn btn-gold btn-sm" onclick="sendQuoteToTab(${i})" title="Mở trong tab Báo Giá Cho Khách">📄 Báo giá</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteQuote(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+// Đồng bộ tên khách → tab Báo Giá Cho Khách
+function syncCustomerToQuote() {
+  const name  = document.getElementById('multi-customer-name').value.trim();
+  const phone = document.getElementById('multi-customer-phone').value.trim();
+  const titleEl = document.getElementById('bq-title');
+  const quoteName = document.getElementById('multi-quote-name').value.trim();
+  // Cập nhật tên báo giá nếu có tên khách
+  if (titleEl && name) {
+    titleEl.value = quoteName + (name ? ' - ' + name : '');
+  }
+}
+
 // =========== GOOGLE SHEETS SYNC ENGINE ===========
 const _apiReady = () => API_URL && !API_URL.includes('PASTE_YOUR');
 
@@ -2059,6 +2266,8 @@ addQuoteRow();
 addNoteRow();
 // Khôi phục logo đã lưu
 restoreLogo();
+// Load saved quotes panel
+renderSavedQuotes();
 // Format input tiền
 formatMoneyInputs();
 // Đồng bộ dữ liệu từ Google Sheet khi tải trang
