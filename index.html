@@ -2619,15 +2619,21 @@ function clearAuth() {
 }
 
 async function verifySession(user, token) {
-  if (!AUTH_API_URL || AUTH_API_URL.includes('PASTE_YOUR')) {
-    // Local fallback: token = btoa(user+':'+pass)
-    return token === btoa(LOCAL_FALLBACK_USER + ':' + LOCAL_FALLBACK_PASS);
-  }
+  const localOk = token === btoa(LOCAL_FALLBACK_USER + ':' + LOCAL_FALLBACK_PASS);
+  if (!AUTH_API_URL || AUTH_API_URL.includes('PASTE_YOUR')) return localOk;
   try {
-    const res = await fetch(`${AUTH_API_URL}?action=verify&user=${encodeURIComponent(user)}&token=${encodeURIComponent(token)}`);
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(
+      `${AUTH_API_URL}?action=verify&user=${encodeURIComponent(user)}&token=${encodeURIComponent(token)}`,
+      { signal: ctrl.signal }
+    );
     const d = await res.json();
     return d.ok === true;
-  } catch(e) { return false; }
+  } catch(e) {
+    // GAS timeout/offline → fallback local token
+    return localOk;
+  }
 }
 
 async function doLogin() {
@@ -2659,9 +2665,38 @@ async function doLogin() {
       }
     } else {
       // ---- GOOGLE APPS SCRIPT MODE ----
-      const res = await fetch(`${AUTH_API_URL}?action=login&user=${encodeURIComponent(username)}&pass=${encodeURIComponent(password)}&api=${encodeURIComponent(API_TOKEN)}`);
-      const d = await res.json();
-      if (d.ok) { loginOk = true; token = d.token; }
+      try {
+        const ctrl = new AbortController();
+        const tid  = setTimeout(() => ctrl.abort(), 10000);
+        const res  = await fetch(
+          `${AUTH_API_URL}?action=login&user=${encodeURIComponent(username)}&pass=${encodeURIComponent(password)}&api=${encodeURIComponent(API_TOKEN)}`,
+          { signal: ctrl.signal }
+        );
+        clearTimeout(tid);
+        const d = await res.json();
+        if (d.ok) {
+          loginOk = true; token = d.token;
+        } else {
+          btn.disabled = false; btn.innerHTML = 'Đăng nhập';
+          showLoginError('Tên đăng nhập hoặc mật khẩu không đúng.');
+          document.getElementById('loginPassword').value = '';
+          document.getElementById('loginPassword').classList.add('error');
+          return;
+        }
+      } catch(fe) {
+        // GAS không phản hồi → thử local fallback
+        if (username === LOCAL_FALLBACK_USER && password === LOCAL_FALLBACK_PASS) {
+          loginOk = true;
+          token = btoa(username + ':' + password);
+        } else {
+          btn.disabled = false; btn.innerHTML = 'Đăng nhập';
+          const msg = fe.name === 'AbortError'
+            ? 'Hết thời gian chờ. Kiểm tra: (1) Internet có hoạt động? (2) AUTH_API_URL đúng chưa? (3) Apps Script đã deploy?'
+            : 'Lỗi kết nối: ' + fe.message;
+          showLoginError('❌ ' + msg);
+          return;
+        }
+      }
     }
 
     if (loginOk && token) {
@@ -2677,7 +2712,7 @@ async function doLogin() {
       document.getElementById('loginPassword').focus();
     }
   } catch(e) {
-    showLoginError('Lỗi kết nối. Vui lòng thử lại.');
+    showLoginError('❌ Lỗi: ' + e.message);
   }
 
   btn.disabled = false;
