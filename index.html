@@ -2560,14 +2560,12 @@ setInterval(() => syncFromSheet(false), 2 * 60 * 1000); // Tự sync mỗi 2 ph�
 
 // ============================================================
 // ===== HỆ THỐNG ĐĂNG NHẬP =====
-// CONFIG: AUTH_API_URL tự động dùng chung URL với API_URL (cùng 1 Apps Script)
+// CONFIG: URL Google Apps Script (dùng chung cho cả data sync và đăng nhập)
 // ============================================================
-// Không cần đổi dòng này — tự lấy từ API_URL ở trên
-const AUTH_API_URL = API_URL;
+const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec';
 // Tài khoản dự phòng LOCAL (dùng khi GAS không kết nối được)
-// Mật khẩu này PHẢI KHỚP với cột password trong tab Users của Google Sheet
 const LOCAL_FALLBACK_USER = 'admin';
-const LOCAL_FALLBACK_PASS = 'Admin@2025';   // ← Khớp với DEFAULT_USERS trong Code.gs
+const LOCAL_FALLBACK_PASS = 'Admin@2025';
 
 const SESSION_KEY  = 'nttt_session';
 const REMEMBER_KEY = 'nttt_remember';
