@@ -825,8 +825,8 @@
 <script>
 // =========== GOOGLE SHEETS SYNC CONFIG ===========
 // Bước 5: Dán URL Web App của bạn vào đây (xem hướng dẫn)
-const API_URL   = 'https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec';
-const API_TOKEN = 'nttt2024secret'; // Phải trùng SECRET_TOKEN trong Code.gs
+var API_URL   = 'https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec';
+var API_TOKEN = 'nttt2024secret';
 
 // =========== DATA ===========
 const DEFAULT_PRODUCTS = [
@@ -2563,7 +2563,7 @@ setInterval(() => syncFromSheet(false), 2 * 60 * 1000); // Tự sync mỗi 2 ph�
 // CONFIG: AUTH_API_URL tự động dùng chung URL với API_URL (cùng 1 Apps Script)
 // ============================================================
 // Không cần đổi dòng này — tự lấy từ API_URL ở trên
-const AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec';
+var AUTH_API_URL = 'https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec';
 // Tài khoản dự phòng LOCAL (dùng khi GAS không kết nối được)
 // Mật khẩu này PHẢI KHỚP với cột password trong tab Users của Google Sheet
 const LOCAL_FALLBACK_USER = 'admin';
