@@ -2560,135 +2560,106 @@ setInterval(() => syncFromSheet(false), 2 * 60 * 1000); // Tự sync mỗi 2 ph�
 
 // ============================================================
 // ===== HỆ THỐNG ĐĂNG NHẬP =====
-var AUTH_API_URL = "https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec";
-var AUTH_TOKEN   = "nttt2024secret";
-var SESSION_KEY  = "nttt_session";
-var REMEMBER_KEY = "nttt_remember";
+var _GAS_URL = "https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec";
+var _GAS_TOK = "nttt2024secret";
+var _SESS_K  = "nttt_session";
+var _REM_K   = "nttt_remember";
 
-(function initAuth() {
-  var rem  = _tryParse(localStorage.getItem(REMEMBER_KEY));
-  var sess = _tryParse(sessionStorage.getItem(SESSION_KEY));
+(function() {
+  var rem  = _jp(localStorage.getItem(_REM_K));
+  var sess = _jp(sessionStorage.getItem(_SESS_K));
   var saved = rem || sess;
-  if (saved && saved.user && saved.token) {
-    _verifySession(saved.user, saved.token).then(function(ok) {
-      if (ok) { showApp(saved.user, saved.token); }
-      else    { _clearAuth(); showLoginOverlay(); }
+  if (saved && saved.u && saved.t) {
+    _verify(saved.u, saved.t).then(function(ok) {
+      if (ok) _showApp(saved.u, saved.t);
+      else { _clr(); _showLogin(); }
     });
-  } else {
-    showLoginOverlay();
-  }
+  } else { _showLogin(); }
 })();
 
-function _tryParse(s) { try { return JSON.parse(s); } catch(e) { return null; } }
-function tryParseJSON(s) { return _tryParse(s); }
+function _jp(s) { try { return JSON.parse(s); } catch(e) { return null; } }
+function tryParseJSON(s) { return _jp(s); }
 
-function showLoginOverlay() {
-  var overlay = document.getElementById("loginOverlay");
-  overlay.classList.remove("hidden");
-  var rem = _tryParse(localStorage.getItem(REMEMBER_KEY));
-  if (rem && rem.user) {
-    document.getElementById("loginUsername").value = rem.user;
+function _showLogin() {
+  document.getElementById("loginOverlay").classList.remove("hidden");
+  var r = _jp(localStorage.getItem(_REM_K));
+  if (r && r.u) {
+    document.getElementById("loginUsername").value = r.u;
     document.getElementById("loginPassword").focus();
-  } else {
-    document.getElementById("loginUsername").focus();
-  }
+  } else { document.getElementById("loginUsername").focus(); }
 }
 
-function showApp(user, token) {
+function _showApp(user, tok) {
   document.getElementById("loginOverlay").classList.add("hidden");
-  var badge = document.getElementById("currentUserBadge");
-  var logoutBtn = document.getElementById("logoutBtn");
-  if (badge) badge.textContent = "👤 " + user;
-  if (logoutBtn) logoutBtn.style.display = "inline-block";
-  syncFromSheet(false);
+  var b = document.getElementById("currentUserBadge");
+  var lb = document.getElementById("logoutBtn");
+  if (b) b.textContent = "👤 " + user;
+  if (lb) lb.style.display = "inline-block";
+  if (typeof syncFromSheet === "function") syncFromSheet(false);
 }
+function showApp(u,t) { _showApp(u,t); }
 
-function _clearAuth() {
-  localStorage.removeItem(REMEMBER_KEY);
-  sessionStorage.removeItem(SESSION_KEY);
+function _clr() {
+  localStorage.removeItem(_REM_K);
+  sessionStorage.removeItem(_SESS_K);
 }
-function clearAuth() { _clearAuth(); }
+function clearAuth() { _clr(); }
 
-async function _verifySession(user, token) {
+async function _verify(user, tok) {
   try {
-    var ctrl = new AbortController();
-    setTimeout(function() { ctrl.abort(); }, 6000);
-    var url = AUTH_API_URL + "?action=verify&user=" + encodeURIComponent(user) + "&token=" + encodeURIComponent(token);
-    var res = await fetch(url, { signal: ctrl.signal });
-    var d = await res.json();
+    var r = await fetch(_GAS_URL + "?action=verify&user=" + encodeURIComponent(user) + "&token=" + encodeURIComponent(tok));
+    var d = await r.json();
     return d.ok === true;
   } catch(e) { return false; }
 }
 
 async function doLogin() {
-  var btn      = document.getElementById("loginBtn");
-  var errEl    = document.getElementById("loginError");
-  var username = document.getElementById("loginUsername").value.trim().toLowerCase();
-  var password = document.getElementById("loginPassword").value;
-  var remember = document.getElementById("loginRemember").checked;
-
-  errEl.classList.remove("show");
-  document.getElementById("loginUsername").classList.remove("error");
-  document.getElementById("loginPassword").classList.remove("error");
-
-  if (!username) {
-    document.getElementById("loginUsername").classList.add("error");
-    _showLoginErr("Vui l\u00f2ng nh\u1eadp t\u00ean \u0111\u0103ng nh\u1eadp");
-    return;
-  }
-  if (!password) {
-    document.getElementById("loginPassword").classList.add("error");
-    _showLoginErr("Vui l\u00f2ng nh\u1eadp m\u1eadt kh\u1ea9u");
-    return;
-  }
-
+  var btn  = document.getElementById("loginBtn");
+  var eEl  = document.getElementById("loginError");
+  var user = document.getElementById("loginUsername").value.trim().toLowerCase();
+  var pass = document.getElementById("loginPassword").value;
+  var rem  = document.getElementById("loginRemember").checked;
+  eEl.classList.remove("show");
+  if (!user) { _showLoginErr("Vui lòng nhập tên đăng nhập"); return; }
+  if (!pass) { _showLoginErr("Vui lòng nhập mật khẩu"); return; }
   btn.disabled = true;
-  btn.innerHTML = "\u0110ang x\u00e1c th\u1ef1c...";
-
+  btn.textContent = "Đang xác thực...";
   try {
-    var ctrl = new AbortController();
-    var tid  = setTimeout(function() { ctrl.abort(); }, 10000);
-    var params = "action=login"
-      + "&user=" + encodeURIComponent(username)
-      + "&pass=" + encodeURIComponent(password)
-      + "&api="  + encodeURIComponent(AUTH_TOKEN);
-    var res = await fetch(AUTH_API_URL + "?" + params, { signal: ctrl.signal });
-    clearTimeout(tid);
-    var d = await res.json();
+    var url = _GAS_URL + "?action=login&user=" + encodeURIComponent(user) + "&pass=" + encodeURIComponent(pass) + "&api=" + encodeURIComponent(_GAS_TOK);
+    var res = await fetch(url);
+    var txt = await res.text();
+    var d;
+    try { d = JSON.parse(txt); } catch(e) {
+      _showLoginErr("GAS trả về lỗi: " + txt.substring(0,80));
+      btn.disabled=false; btn.textContent="Đăng nhập"; return;
+    }
     if (d.ok) {
-      var session = { user: d.user || username, token: d.token };
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      if (remember) localStorage.setItem(REMEMBER_KEY, JSON.stringify(session));
-      else localStorage.removeItem(REMEMBER_KEY);
-      showApp(session.user, session.token);
+      var sess = { u: d.user||user, t: d.token };
+      sessionStorage.setItem(_SESS_K, JSON.stringify(sess));
+      if (rem) localStorage.setItem(_REM_K, JSON.stringify(sess));
+      else localStorage.removeItem(_REM_K);
+      _showApp(sess.u, sess.t);
     } else {
-      _showLoginErr("T\u00ean \u0111\u0103ng nh\u1eadp ho\u1eb7c m\u1eadt kh\u1ea9u kh\u00f4ng \u0111\u00fang.");
-      document.getElementById("loginPassword").classList.add("error");
+      _showLoginErr("Tên đăng nhập hoặc mật khẩu không đúng");
       document.getElementById("loginPassword").value = "";
       document.getElementById("loginPassword").focus();
     }
   } catch(e) {
-    var msg = e.name === "AbortError"
-      ? "H\u1ebft th\u1eddi gian ch\u1edd. Ki\u1ec3m tra k\u1ebft n\u1ed1i internet."
-      : "L\u1ed7i k\u1ebft n\u1ed1i: " + e.message;
-    _showLoginErr(msg);
+    _showLoginErr("Lỗi: " + e.message);
   }
-
-  btn.disabled = false;
-  btn.innerHTML = "\u0110\u0103ng nh\u1eadp";
+  btn.disabled=false; btn.textContent="Đăng nhập";
 }
 
-function _showLoginErr(msg) {
-  var errEl = document.getElementById("loginError");
-  errEl.textContent = "\u26a0\ufe0f " + msg;
-  errEl.classList.add("show");
+function _showLoginErr(m) {
+  var e = document.getElementById("loginError");
+  e.textContent = "⚠️ " + m;
+  e.classList.add("show");
 }
-function showLoginError(msg) { _showLoginErr(msg); }
+function showLoginError(m) { _showLoginErr(m); }
 
 function doLogout() {
-  if (!confirm("B\u1ea1n c\u00f3 ch\u1eafc mu\u1ed1n \u0111\u0103ng xu\u1ea5t?")) return;
-  _clearAuth();
-  location.reload();
+  if (!confirm("Bạn có chắc muốn đăng xuất?")) return;
+  _clr(); location.reload();
 }
 // ===== KẾT THÚC HỆ THỐNG ĐĂNG NHẬP =====// ============================================================
 
