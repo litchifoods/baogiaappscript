@@ -2669,8 +2669,13 @@ async function doLogin() {
       try {
         const ctrl = new AbortController();
         const tid  = setTimeout(() => ctrl.abort(), 10000);
-        const res  = await fetch(
-          `${AUTH_API_URL}?action=login&user=${encodeURIComponent(username)}&pass=${encodeURIComponent(password)}&api=${encodeURIComponent(API_TOKEN)}`,
+        // Dùng POST để tránh lỗi encode ký tự đặc biệt (@) trong mật khẩu
+        const loginParams = new URLSearchParams();
+        loginParams.append('action', 'login');
+        loginParams.append('user', username);
+        loginParams.append('pass', password);
+        loginParams.append('api', API_TOKEN);
+        const res  = await fetch(AUTH_API_URL + '?' + loginParams.toString(),
           { signal: ctrl.signal }
         );
         clearTimeout(tid);
