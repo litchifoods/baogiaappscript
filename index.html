@@ -825,7 +825,7 @@
 <script>
 // =========== GOOGLE SHEETS SYNC CONFIG ===========
 // Bước 5: Dán URL Web App của bạn vào đây (xem hướng dẫn)
-const API_URL   = 'https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec';
+const API_URL   = 'https://script.google.com/macros/s/AKfycbyMUIWMkehTZfK8ZSk_8OxJefW0NUCEKx5ZIgRgf_tKeL1ofZJ03NbGIwuK2QLmIQ/exec';
 const API_TOKEN = 'nttt2024secret'; // Phải trùng SECRET_TOKEN trong Code.gs
 
 // =========== DATA ===========
@@ -2560,12 +2560,11 @@ setInterval(() => syncFromSheet(false), 2 * 60 * 1000); // Tự sync mỗi 2 ph�
 
 // ============================================================
 // ===== HỆ THỐNG ĐĂNG NHẬP =====
-var _GAS = "https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec";
+var _GAS = "https://script.google.com/macros/s/AKfycbyMUIWMkehTZfK8ZSk_8OxJefW0NUCEKx5ZIgRgf_tKeL1ofZJ03NbGIwuK2QLmIQ/exec";
 var _TOK = "nttt2024secret";
 var _SK  = "nttt_session";
 var _RK  = "nttt_remember";
 
-// Gọi GAS qua XMLHttpRequest (tránh lỗi redirect với fetch)
 function _callGAS(params, cb) {
   var xhr = new XMLHttpRequest();
   xhr.open("GET", _GAS + "?" + params, true);
@@ -2573,49 +2572,54 @@ function _callGAS(params, cb) {
     if (xhr.readyState !== 4) return;
     var txt = xhr.responseText || "";
     if (txt.trim().charAt(0) === "<") {
-      cb(new Error("GAS_HTML"), null);
+      cb(new Error("HTML_ERR"), null);
     } else {
       try { cb(null, JSON.parse(txt)); }
-      catch(e) { cb(new Error("JSON_ERR:" + txt.substring(0,40)), null); }
+      catch(e) { cb(new Error("JSON:" + txt.substring(0,60)), null); }
     }
   };
   xhr.onerror = function() { cb(new Error("XHR_ERR"), null); };
   xhr.send();
 }
 
+function _jp(s) { try { return JSON.parse(s); } catch(e) { return null; } }
+function tryParseJSON(s) { return _jp(s); }
+
 (function() {
   var rem  = _jp(localStorage.getItem(_RK));
   var sess = _jp(sessionStorage.getItem(_SK));
   var sv = rem || sess;
   if (sv && sv.u && sv.t) {
-    _callGAS("action=verify&user="+encodeURIComponent(sv.u)+"&token="+encodeURIComponent(sv.t), function(err, d) {
+    _callGAS("action=verify&user="+encodeURIComponent(sv.u)+"&token="+encodeURIComponent(sv.t), function(err,d) {
       if (!err && d && d.ok) _on(sv.u, sv.t);
       else { _cl(); _sl(); }
     });
   } else { _sl(); }
 })();
 
-function _jp(s) { try { return JSON.parse(s); } catch(e) { return null; } }
-function tryParseJSON(s) { return _jp(s); }
-
 function _sl() {
   document.getElementById("loginOverlay").classList.remove("hidden");
   var r = _jp(localStorage.getItem(_RK));
-  if (r && r.u) { document.getElementById("loginUsername").value = r.u; document.getElementById("loginPassword").focus(); }
-  else { document.getElementById("loginUsername").focus(); }
+  if (r && r.u) {
+    document.getElementById("loginUsername").value = r.u;
+    document.getElementById("loginPassword").focus();
+  } else { document.getElementById("loginUsername").focus(); }
 }
 
 function _on(user, tok) {
   document.getElementById("loginOverlay").classList.add("hidden");
-  var b = document.getElementById("currentUserBadge");
+  var b  = document.getElementById("currentUserBadge");
   var lb = document.getElementById("logoutBtn");
-  if (b) b.textContent = "👤 " + user;
+  if (b)  b.textContent  = "👤 " + user;
   if (lb) lb.style.display = "inline-block";
   if (typeof syncFromSheet === "function") syncFromSheet(false);
 }
-function showApp(u, t) { _on(u, t); }
+function showApp(u,t) { _on(u,t); }
 
-function _cl() { localStorage.removeItem(_RK); sessionStorage.removeItem(_SK); }
+function _cl() {
+  localStorage.removeItem(_RK);
+  sessionStorage.removeItem(_SK);
+}
 function clearAuth() { _cl(); }
 
 function doLogin() {
@@ -2629,18 +2633,14 @@ function doLogin() {
   if (!pass) { _err("Nhập mật khẩu"); return; }
   btn.disabled = true;
   btn.textContent = "Đang kiểm tra...";
-  var p = "action=login&user=" + encodeURIComponent(user) + "&pass=" + encodeURIComponent(pass) + "&api=" + encodeURIComponent(_TOK);
+  var p = "action=login"
+    + "&user=" + encodeURIComponent(user)
+    + "&pass=" + encodeURIComponent(pass)
+    + "&api="  + encodeURIComponent(_TOK);
   _callGAS(p, function(err, d) {
     btn.disabled = false;
     btn.textContent = "Đăng nhập";
-    if (err) {
-      if (err.message === "GAS_HTML") {
-        _err("Lỗi quyền Apps Script — mở URL GAS trực tiếp để đăng nhập Google");
-      } else {
-        _err("Lỗi: " + err.message);
-      }
-      return;
-    }
+    if (err) { _err("Lỗi kết nối: " + err.message); return; }
     if (d && d.ok) {
       var sv = { u: d.user || user, t: d.token };
       sessionStorage.setItem(_SK, JSON.stringify(sv));
