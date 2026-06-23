@@ -3,6 +3,7 @@
 <head>
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/litchifoods/baogiaappscript/main/Favi%20baogia%20512x512.png">
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com https://fonts.googleapis.com; default-src 'self' 'unsafe-inline' https:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dự Kiến Báo Giá – Nội Thất Tính Tuyết</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -825,7 +826,7 @@
 <script>
 // =========== GOOGLE SHEETS SYNC CONFIG ===========
 // Bước 5: Dán URL Web App của bạn vào đây (xem hướng dẫn)
-const API_URL   = 'https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec';
+const API_URL   = 'https://script.google.com/macros/s/AKfycbyMUIWMkehTZfK8ZSk_8OxJefW0NUCEKx5ZIgRgf_tKeL1ofZJ03NbGIwuK2QLmIQ/exec';
 const API_TOKEN = 'nttt2024secret'; // Phải trùng SECRET_TOKEN trong Code.gs
 
 // =========== DATA ===========
@@ -2560,107 +2561,180 @@ setInterval(() => syncFromSheet(false), 2 * 60 * 1000); // Tự sync mỗi 2 ph�
 
 // ============================================================
 // ===== HỆ THỐNG ĐĂNG NHẬP =====
-var _GAS = "https://script.google.com/macros/s/AKfycbyMUIWMkehTZfK8ZSk_8OxJefW0NUCEKx5ZIgRgf_tKeL1ofZJ03NbGIwuK2QLmIQ/exec";
-var _TOK = "nttt2024secret";
-var _SK  = "nttt_session";
-var _RK  = "nttt_remember";
-var _cbCount = 0;
+// CONFIG: AUTH_API_URL tự động dùng chung URL với API_URL (cùng 1 Apps Script)
+// ============================================================
+// Không cần đổi dòng này — tự lấy từ API_URL ở trên
+const AUTH_API_URL = API_URL;
+// Tài khoản dự phòng LOCAL (dùng khi GAS không kết nối được)
+// Mật khẩu này PHẢI KHỚP với cột password trong tab Users của Google Sheet
+const LOCAL_FALLBACK_USER = 'admin';
+const LOCAL_FALLBACK_PASS = 'Admin@2025';   // ← Khớp với DEFAULT_USERS trong Code.gs
 
-// JSONP — tránh hoàn toàn lỗi CORS
-function _jsonp(params, cb) {
-  var cbName = "_cb" + (++_cbCount);
-  var script = document.createElement("script");
-  var done = false;
-  var timer = setTimeout(function() {
-    if (!done) { done=true; delete window[cbName]; document.body.removeChild(script); cb(new Error("TIMEOUT"), null); }
-  }, 12000);
-  window[cbName] = function(data) {
-    if (done) return; done=true;
-    clearTimeout(timer);
-    delete window[cbName];
-    try { document.body.removeChild(script); } catch(e) {}
-    cb(null, data);
-  };
-  script.src = _GAS + "?" + params + "&callback=" + cbName;
-  script.onerror = function() {
-    if (done) return; done=true;
-    clearTimeout(timer); delete window[cbName];
-    cb(new Error("SCRIPT_ERR"), null);
-  };
-  document.body.appendChild(script);
-}
+const SESSION_KEY  = 'nttt_session';
+const REMEMBER_KEY = 'nttt_remember';
 
-function _jp(s) { try { return JSON.parse(s); } catch(e) { return null; } }
-function tryParseJSON(s) { return _jp(s); }
-
-(function() {
-  var rem  = _jp(localStorage.getItem(_RK));
-  var sess = _jp(sessionStorage.getItem(_SK));
-  var sv = rem || sess;
-  if (sv && sv.u && sv.t) {
-    _jsonp("action=verify&user="+encodeURIComponent(sv.u)+"&token="+encodeURIComponent(sv.t), function(err,d) {
-      if (!err && d && d.ok) _on(sv.u, sv.t);
-      else { _cl(); _sl(); }
+// ---- Kiểm tra session khi tải trang ----
+(function initAuth() {
+  const rem  = tryParseJSON(localStorage.getItem(REMEMBER_KEY));
+  const sess = tryParseJSON(sessionStorage.getItem(SESSION_KEY));
+  const saved = rem || sess;
+  if (saved && saved.user && saved.token) {
+    verifySession(saved.user, saved.token).then(ok => {
+      if (ok) { showApp(saved.user, saved.token); }
+      else    { clearAuth(); showLoginOverlay(); }
     });
-  } else { _sl(); }
+  } else {
+    showLoginOverlay();
+  }
 })();
 
-function _sl() {
-  document.getElementById("loginOverlay").classList.remove("hidden");
-  var r = _jp(localStorage.getItem(_RK));
-  if (r && r.u) { document.getElementById("loginUsername").value=r.u; document.getElementById("loginPassword").focus(); }
-  else { document.getElementById("loginUsername").focus(); }
+function tryParseJSON(s) {
+  try { return JSON.parse(s); } catch(e) { return null; }
 }
 
-function _on(user, tok) {
-  document.getElementById("loginOverlay").classList.add("hidden");
-  var b=document.getElementById("currentUserBadge");
-  var lb=document.getElementById("logoutBtn");
-  if(b) b.textContent="👤 "+user;
-  if(lb) lb.style.display="inline-block";
-  if(typeof syncFromSheet==="function") syncFromSheet(false);
+function showLoginOverlay() {
+  const overlay = document.getElementById('loginOverlay');
+  overlay.classList.remove('hidden');
+  // Pre-fill saved username if remember was checked
+  const rem = tryParseJSON(localStorage.getItem(REMEMBER_KEY));
+  if (rem && rem.user) {
+    document.getElementById('loginUsername').value = rem.user;
+    document.getElementById('loginPassword').focus();
+  } else {
+    document.getElementById('loginUsername').focus();
+  }
 }
-function showApp(u,t){_on(u,t);}
 
-function _cl(){localStorage.removeItem(_RK);sessionStorage.removeItem(_SK);}
-function clearAuth(){_cl();}
+function showApp(user, token) {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  const badge = document.getElementById('currentUserBadge');
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (badge) badge.textContent = '👤 ' + user;
+  if (logoutBtn) logoutBtn.style.display = 'inline-block';
+  // Sync ngay khi vào app (lấy sản phẩm mới nhất từ Sheet)
+  syncFromSheet(false);
+}
 
-function doLogin(){
-  var btn=document.getElementById("loginBtn");
-  var eEl=document.getElementById("loginError");
-  var user=document.getElementById("loginUsername").value.trim().toLowerCase();
-  var pass=document.getElementById("loginPassword").value;
-  var rem=document.getElementById("loginRemember").checked;
-  eEl.classList.remove("show");
-  if(!user){_err("Nhập tên đăng nhập");return;}
-  if(!pass){_err("Nhập mật khẩu");return;}
-  btn.disabled=true; btn.textContent="Đang kiểm tra...";
-  var p="action=login&user="+encodeURIComponent(user)+"&pass="+encodeURIComponent(pass)+"&api="+encodeURIComponent(_TOK);
-  _jsonp(p, function(err,d){
-    btn.disabled=false; btn.textContent="Đăng nhập";
-    if(err){_err("Lỗi kết nối: "+err.message);return;}
-    if(d&&d.ok){
-      var sv={u:d.user||user,t:d.token};
-      sessionStorage.setItem(_SK,JSON.stringify(sv));
-      if(rem) localStorage.setItem(_RK,JSON.stringify(sv));
-      else localStorage.removeItem(_RK);
-      _on(sv.u,sv.t);
+function clearAuth() {
+  localStorage.removeItem(REMEMBER_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+async function verifySession(user, token) {
+  const localOk = token === btoa(LOCAL_FALLBACK_USER + ':' + LOCAL_FALLBACK_PASS);
+  if (!AUTH_API_URL || AUTH_API_URL.includes('PASTE_YOUR')) return localOk;
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(
+      `${AUTH_API_URL}?action=verify&user=${encodeURIComponent(user)}&token=${encodeURIComponent(token)}`,
+      { signal: ctrl.signal }
+    );
+    const d = await res.json();
+    return d.ok === true;
+  } catch(e) {
+    // GAS timeout/offline → fallback local token
+    return localOk;
+  }
+}
+
+async function doLogin() {
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const remember = document.getElementById('loginRemember').checked;
+
+  errEl.classList.remove('show');
+  document.getElementById('loginUsername').classList.remove('error');
+  document.getElementById('loginPassword').classList.remove('error');
+
+  if (!username) { document.getElementById('loginUsername').classList.add('error'); showLoginError('Vui lòng nhập tên đăng nhập'); return; }
+  if (!password) { document.getElementById('loginPassword').classList.add('error'); showLoginError('Vui lòng nhập mật khẩu'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="login-spinner"></span>Đang xác thực...';
+
+  try {
+    let token = null;
+    let loginOk = false;
+
+    if (!AUTH_API_URL || AUTH_API_URL.includes('PASTE_YOUR')) {
+      // ---- LOCAL FALLBACK MODE ----
+      if (username === LOCAL_FALLBACK_USER && password === LOCAL_FALLBACK_PASS) {
+        loginOk = true;
+        token = btoa(username + ':' + password);
+      }
     } else {
-      _err("Tên đăng nhập hoặc mật khẩu không đúng");
-      document.getElementById("loginPassword").value="";
-      document.getElementById("loginPassword").focus();
+      // ---- GOOGLE APPS SCRIPT MODE ----
+      try {
+        const ctrl = new AbortController();
+        const tid  = setTimeout(() => ctrl.abort(), 10000);
+        const res  = await fetch(
+          `${AUTH_API_URL}?action=login&user=${encodeURIComponent(username)}&pass=${encodeURIComponent(password)}&api=${encodeURIComponent(API_TOKEN)}`,
+          { signal: ctrl.signal }
+        );
+        clearTimeout(tid);
+        const d = await res.json();
+        if (d.ok) {
+          loginOk = true; token = d.token;
+        } else {
+          btn.disabled = false; btn.innerHTML = 'Đăng nhập';
+          showLoginError('Tên đăng nhập hoặc mật khẩu không đúng.');
+          document.getElementById('loginPassword').value = '';
+          document.getElementById('loginPassword').classList.add('error');
+          return;
+        }
+      } catch(fe) {
+        // GAS không phản hồi → thử local fallback
+        if (username === LOCAL_FALLBACK_USER && password === LOCAL_FALLBACK_PASS) {
+          loginOk = true;
+          token = btoa(username + ':' + password);
+        } else {
+          btn.disabled = false; btn.innerHTML = 'Đăng nhập';
+          const msg = fe.name === 'AbortError'
+            ? 'Hết thời gian chờ. Kiểm tra: (1) Internet có hoạt động? (2) AUTH_API_URL đúng chưa? (3) Apps Script đã deploy?'
+            : 'Lỗi kết nối: ' + fe.message;
+          showLoginError('❌ ' + msg);
+          return;
+        }
+      }
     }
-  });
+
+    if (loginOk && token) {
+      const session = { user: username, token };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      if (remember) localStorage.setItem(REMEMBER_KEY, JSON.stringify(session));
+      else localStorage.removeItem(REMEMBER_KEY);
+      showApp(username, token);
+    } else {
+      showLoginError('Tên đăng nhập hoặc mật khẩu không đúng.');
+      document.getElementById('loginPassword').classList.add('error');
+      document.getElementById('loginPassword').value = '';
+      document.getElementById('loginPassword').focus();
+    }
+  } catch(e) {
+    showLoginError('❌ Lỗi: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Đăng nhập';
 }
 
-function _err(m){var e=document.getElementById("loginError");e.textContent="⚠️ "+m;e.classList.add("show");}
-function showLoginError(m){_err(m);}
-
-function doLogout(){
-  if(!confirm("Bạn có chắc muốn đăng xuất?"))return;
-  _cl();location.reload();
+function showLoginError(msg) {
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '⚠️ ' + msg;
+  errEl.classList.add('show');
 }
-// ===== KẾT THÚC HỆ THỐNG ĐĂNG NHẬP =====// ============================================================
+
+function doLogout() {
+  if (!confirm('Bạn có chắc muốn đăng xuất?')) return;
+  clearAuth();
+  location.reload();
+}
+// ============================================================
+// ===== KẾT THÚC HỆ THỐNG ĐĂNG NHẬP =====
+// ============================================================
 
 </script>
 
