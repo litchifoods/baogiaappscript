@@ -286,9 +286,9 @@
     font-family: 'Be Vietnam Pro', sans-serif; transition: all 0.15s;
   }
   .col-picker-toggle:hover { border-color: var(--green); color: var(--green); }
-  .col-picker-panel { display: none; margin-top: 10px; background: var(--cream); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .col-picker-panel { display: none; margin-top: 10px; background: var(--cream); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; max-width: 100%; overflow-x: hidden; }
   .col-picker-panel.open { display: block; }
-  .col-picker-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .col-picker-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .col-chip {
     display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
     border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer;
@@ -369,6 +369,11 @@
     border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
     display: none; text-align: center;
   }
+  .phone-warning {
+    font-size: 11px; color: #C0392B; margin-top: 3px; display: none;
+    font-weight: 500;
+  }
+  .phone-warning.show { display: block; }
   .login-error.show { display: block; }
   .login-footer { text-align: center; margin-top: 20px; font-size: 11px; color: #aaa; }
   .login-spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
@@ -583,7 +588,8 @@
       </div>
       <div class="form-group">
         <label>Số điện thoại</label>
-        <input type="text" id="multi-customer-phone" placeholder="VD: 0912 345 678" oninput="syncCustomerToQuote()">
+        <input type="text" id="multi-customer-phone" placeholder="VD: 0912 345 678" maxlength="10" oninput="validatePhone(this);syncCustomerToQuote()">
+        <div class="phone-warning" id="warn-multi-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
       </div>
       <div class="form-group">
         <label>Địa chỉ khách hàng</label>
@@ -685,7 +691,11 @@
     </div>
     <div class="bq-store-fields">
       <div class="form-group"><label>Tên cửa hàng / Đơn vị</label><input type="text" id="bq-store-name" placeholder="VD: Nội Thất Tính Tuyết"></div>
-      <div class="form-group"><label>Số điện thoại</label><input type="text" id="bq-store-phone" placeholder="VD: 0912 345 678"></div>
+      <div class="form-group">
+        <label>Số điện thoại</label>
+        <input type="text" id="bq-store-phone" placeholder="VD: 0912 345 678" maxlength="10" oninput="validatePhone(this)">
+        <div class="phone-warning" id="warn-store-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
+      </div>
       <div class="form-group full"><label>Địa chỉ</label><input type="text" id="bq-store-addr" placeholder="VD: 123 Đường Lê Lợi, TP. Hải Dương"></div>
       <div class="form-group full"><label>Mô tả / Slogan cửa hàng</label><input type="text" id="bq-store-desc" placeholder="VD: Chuyên cung cấp rèm cửa & nội thất cao cấp"></div>
       <div class="form-group"><label>Email (nếu có)</label><input type="text" id="bq-store-email" placeholder="VD: noithattt@gmail.com"></div>
@@ -963,6 +973,21 @@ let PRODUCTS = loadProducts();
 const fmt = n => Math.round(n).toLocaleString('vi-VN') + 'đ';
 const fmtNum = n => Math.round(n).toLocaleString('vi-VN'); // Có dấu chấm, không có 'đ'
 
+// Validate SĐT Việt Nam: 10 số, bắt đầu bằng 0
+function validatePhone(el) {
+  const val = el.value.replace(/[^0-9]/g, '');
+  el.value = val; // chỉ cho nhập số
+  const warnId = el.id === 'multi-customer-phone' ? 'warn-multi-phone'
+               : el.id === 'bq-store-phone' ? 'warn-store-phone' : null;
+  if (!warnId) return;
+  const warn = document.getElementById(warnId);
+  if (!warn) return;
+  if (val.length === 0) { warn.classList.remove('show'); return; }
+  const isValid = val.length === 10 && val.startsWith('0');
+  warn.classList.toggle('show', !isValid);
+  el.style.borderColor = isValid || val.length === 0 ? '' : '#C0392B';
+}
+
 // Format input tiền: hiện dấu chấm khi blur, số thuần khi focus
 function formatMoneyInputs() {
   const moneyIds = ['shipIn','shipOut','install','other',
@@ -1177,7 +1202,7 @@ function selectQuoteDDFixed(idx) {
   const display = document.getElementById('qdd-' + rowId + '-display');
   if (display) { display.textContent = p.name; display.classList.remove('placeholder-text'); }
   const matEl = document.getElementById('qmat-' + rowId);
-  if (matEl && !matEl.value) matEl.value = p.mat;
+  if (matEl) matEl.value = p.mat || '';  // luôn điền mat khi chọn SP
   closeQuoteDDFixed();
   recalcRow(rowId);
 }
@@ -1313,7 +1338,7 @@ function addItem() {
   const rev = sell * area * qty;
   const profit = rev - totalCost;
   const margin = rev > 0 ? (profit / rev * 100) : 0;
-  multiItems.push({ name: p.name, w, h, area, qty, importPrice, shipIn, shipOut, install, other, extraCost, totalCost, sellPrice: sell, rev, profit, margin });
+  multiItems.push({ name: p.name, mat: p.mat || '', w, h, area, qty, importPrice, shipIn, shipOut, install, other, extraCost, totalCost, sellPrice: sell, rev, profit, margin });
   renderMulti();
 }
 // ── Drag & drop sắp xếp sản phẩm ──────────────────────────
@@ -1522,7 +1547,7 @@ function addQuoteRow() {
            style="width:100%;cursor:pointer;font-size:13px;">— Tìm sản phẩm —</div>
     </td>
     <td><input type="text" id="qmat-${rowId}" placeholder="Chất liệu..." style="width:100%;"></td>
-    <td><input type="number" id="qprice-${rowId}" placeholder="0" oninput="recalcRow('${rowId}')" style="width:100%;text-align:right;"></td>
+    <td><input type="text" inputmode="numeric" id="qprice-${rowId}" placeholder="0" oninput="formatQPrice('${rowId}')" style="width:100%;text-align:right;"></td>
     <td><input type="number" id="qw-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRowArea('${rowId}')" style="width:100%;text-align:right;"></td>
     <td><input type="number" id="qh-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRowArea('${rowId}')" style="width:100%;text-align:right;"></td>
     <td><input type="number" id="qarea-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRow('${rowId}')" style="width:100%;text-align:right;background:#f7f5f0;"></td>
@@ -1540,8 +1565,16 @@ function recalcRowArea(rowId) {
   document.getElementById('qarea-'+rowId).value = (w * h).toFixed(2);
   recalcRow(rowId);
 }
+function formatQPrice(rowId) {
+  const el = document.getElementById('qprice-'+rowId);
+  const raw = (el.value || '').replace(/[^0-9]/g, '');
+  const v = parseInt(raw) || 0;
+  el.value = v > 0 ? v.toLocaleString('vi-VN') : '';
+  recalcRow(rowId);
+}
 function recalcRow(rowId) {
-  const price = parseFloat(document.getElementById('qprice-'+rowId).value) || 0;
+  const priceEl = document.getElementById('qprice-'+rowId);
+  const price = parseInt((priceEl ? priceEl.value : '0').replace(/[^0-9]/g,'')) || 0;
   const area = parseFloat(document.getElementById('qarea-'+rowId).value) || 0;
   const qty = parseFloat(document.getElementById('qqty-'+rowId).value) || 1;
   document.getElementById('qtotal-'+rowId).textContent = fmt(price * area * qty);
@@ -1550,7 +1583,7 @@ function recalcRow(rowId) {
 function recalcQuoteTotal() {
   let total = 0;
   document.querySelectorAll('[id^="qtotal-"]').forEach(el => {
-    total += parseInt((el.textContent || '0').replace(/[^\d]/g,'')) || 0;
+    total += parseInt((el.textContent || '0').replace(/[^0-9]/g,'')) || 0;
   });
   document.getElementById('quoteTotal').textContent = fmt(total);
 }
@@ -1640,7 +1673,7 @@ function exportQuoteHTML() {
     const nameEl = document.getElementById('qdd-'+rowId+'-display');
     const name = nameEl && !nameEl.classList.contains('placeholder-text') ? nameEl.textContent : '';
     const mat = document.getElementById('qmat-'+rowId)?.value || '';
-    const price = document.getElementById('qprice-'+rowId)?.value || '';
+    const priceRaw = document.getElementById('qprice-'+rowId)?.value || ''; const price = priceRaw.replace(/[^0-9]/g,'');
     const w = document.getElementById('qw-'+rowId)?.value || '';
     const h = document.getElementById('qh-'+rowId)?.value || '';
     const area = document.getElementById('qarea-'+rowId)?.value || '';
@@ -1871,7 +1904,7 @@ function openPrintPreview() {
     const nameEl = document.getElementById('qdd-'+rowId+'-display');
     const name = nameEl && !nameEl.classList.contains('placeholder-text') ? nameEl.textContent.trim() : '';
     const mat = document.getElementById('qmat-'+rowId)?.value || '';
-    const price = document.getElementById('qprice-'+rowId)?.value || '';
+    const priceRaw = document.getElementById('qprice-'+rowId)?.value || ''; const price = priceRaw.replace(/[^0-9]/g,'');
     const w = document.getElementById('qw-'+rowId)?.value || '';
     const h = document.getElementById('qh-'+rowId)?.value || '';
     const area = document.getElementById('qarea-'+rowId)?.value || '';
@@ -2191,12 +2224,22 @@ function sendQuoteToTab(idx) {
       // Tên SP
       const disp = document.getElementById('qdd-' + rowId + '-display');
       if (disp) { disp.textContent = it.name; disp.classList.remove('placeholder-text'); }
-      // Chất liệu
+      // Chất liệu — lấy từ dữ liệu lưu, nếu không có thì tìm từ PRODUCTS
       const matEl = document.getElementById('qmat-' + rowId);
-      if (matEl) matEl.value = it.mat || '';
-      // Đơn giá
+      if (matEl) {
+        if (it.mat) {
+          matEl.value = it.mat;
+        } else {
+          const prodFound = PRODUCTS.find(p => p.name === it.name);
+          matEl.value = prodFound ? prodFound.mat : '';
+        }
+      }
+      // Đơn giá — format dấu chấm nghìn
       const priceEl = document.getElementById('qprice-' + rowId);
-      if (priceEl) priceEl.value = it.sellPrice || 0;
+      if (priceEl) {
+        const pv = it.sellPrice || 0;
+        priceEl.value = pv > 0 ? pv.toLocaleString('vi-VN') : '0';
+      }
       // Kích thước
       const wEl = document.getElementById('qw-' + rowId);
       const hEl = document.getElementById('qh-' + rowId);
