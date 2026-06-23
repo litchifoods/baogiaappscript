@@ -1958,69 +1958,6 @@ ${notesHTML ? '<div class="notes-box"><div class="notes-title">Ghi chú</div>' +
 <div class="footer-unit"><strong style="color:#1B4332">${unit}</strong></div>
 <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script>
 
-<!-- QUOTE DROPDOWN FIXED PANEL (dùng chung cho tất cả row) -->
-<div class="quote-dd-fixed" id="quoteDDFixed">
-  <input class="qdd-search-inp" id="quoteDDSearch" type="text" placeholder="🔍  Gõ tên sản phẩm..."
-         oninput="filterQuoteDDFixed(this.value)"
-         onkeydown="if(event.key==='Escape')closeQuoteDDFixed()">
-  <div class="qdd-list" id="quoteDDList"></div>
-</div>
-
-<!-- MODAL SỬA SẢN PHẨM TRONG BÁO GIÁ ĐÃ LƯU -->
-<div class="edit-quote-modal" id="editQuoteModal">
-  <div class="edit-quote-box">
-    <h3 id="editModalTitle">✏️ Sửa báo giá</h3>
-
-    <!-- Thông tin khách -->
-    <div class="eq-field-row" style="grid-template-columns:1fr 1fr 1fr;">
-      <div class="eq-field"><label>Tên khách</label><input type="text" id="eq-cust-name" placeholder="Tên khách hàng"></div>
-      <div class="eq-field"><label>Điện thoại</label><input type="text" id="eq-cust-phone" placeholder="SĐT"></div>
-      <div class="eq-field"><label>Địa chỉ</label><input type="text" id="eq-cust-addr" placeholder="Địa chỉ"></div>
-    </div>
-
-    <!-- Danh sách sản phẩm — bấm để chọn và sửa -->
-    <div class="section-title" style="margin-bottom:8px;">Bấm vào sản phẩm để sửa thông số</div>
-    <div style="overflow-x:auto;margin-bottom:14px;">
-      <table class="eq-table" id="eqProductList">
-        <thead><tr><th>#</th><th>Tên sản phẩm</th><th>Dài×Cao</th><th>SL</th><th>Giá bán/m²</th><th>Thành tiền</th></tr></thead>
-        <tbody id="eqProductBody"></tbody>
-      </table>
-    </div>
-
-    <!-- Form sửa sản phẩm đã chọn -->
-    <div id="eqEditForm" style="display:none;background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px;">
-      <div class="section-title" style="margin-bottom:10px;" id="eqEditFormTitle">Sửa thông số</div>
-      <div class="eq-field-row">
-        <div class="eq-field"><label>Chiều dài (m)</label><input type="number" id="eq-w" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Chiều cao (m)</label><input type="number" id="eq-h" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Số lượng</label><input type="number" id="eq-qty" value="1" min="1" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Giá bán / m² (đ)</label><input type="number" id="eq-sell" placeholder="0" oninput="eqCalc()"></div>
-      </div>
-      <div class="eq-field-row">
-        <div class="eq-field"><label>VC về kho (đ)</label><input type="number" id="eq-shipIn" value="0" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>VC cho khách (đ)</label><input type="number" id="eq-shipOut" value="0" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="number" id="eq-install" value="0" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Chi phí khác (đ)</label><input type="number" id="eq-other" value="0" oninput="eqCalc()"></div>
-      </div>
-      <div style="background:#fff;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap;">
-        <span>Diện tích: <strong id="eq-area-show">0</strong> m²</span>
-        <span>Thành tiền: <strong id="eq-total-show" style="color:var(--green)">0đ</strong></span>
-        <span>Lợi nhuận: <strong id="eq-profit-show">0đ</strong></span>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button class="btn btn-primary btn-sm" onclick="eqSaveItem()">✅ Lưu thay đổi dòng này</button>
-        <button class="btn btn-danger btn-sm" onclick="eqDeleteItem()">🗑 Xóa dòng này</button>
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('eqEditForm').style.display='none'">✕ Đóng</button>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-      <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
-      <button class="btn btn-primary" onclick="eqSaveAll()">💾 Lưu tất cả thay đổi</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>`;
 
