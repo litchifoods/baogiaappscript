@@ -3,7 +3,7 @@
 <head>
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/litchifoods/baogiaappscript/main/Favi%20baogia%20512x512.png">
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com https://fonts.googleapis.com; default-src 'self' 'unsafe-inline' https:;">
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com https://fonts.googleapis.com; default-src 'self' 'unsafe-inline' https: data:; img-src 'self' data: https: blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dự Kiến Báo Giá – Nội Thất Tính Tuyết</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -863,13 +863,13 @@
         <div class="eq-field"><label>Chiều dài (m)</label><input type="number" id="eq-w" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
         <div class="eq-field"><label>Chiều cao (m)</label><input type="number" id="eq-h" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
         <div class="eq-field"><label>Số lượng</label><input type="number" id="eq-qty" value="1" min="1" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Giá bán / m² (đ)</label><input type="number" id="eq-sell" placeholder="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Giá bán / m² (đ)</label><input type="text" inputmode="numeric" id="eq-sell" placeholder="0" oninput="fmtEq('eq-sell');eqCalc()"></div>
       </div>
       <div class="eq-field-row">
-        <div class="eq-field"><label>VC về kho (đ)</label><input type="number" id="eq-shipIn" value="0" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>VC cho khách (đ)</label><input type="number" id="eq-shipOut" value="0" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="number" id="eq-install" value="0" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Chi phí khác (đ)</label><input type="number" id="eq-other" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>VC về kho (đ)</label><input type="text" inputmode="numeric" id="eq-shipIn" value="0" oninput="fmtEq('eq-shipIn');eqCalc()"></div>
+        <div class="eq-field"><label>VC cho khách (đ)</label><input type="text" inputmode="numeric" id="eq-shipOut" value="0" oninput="fmtEq('eq-shipOut');eqCalc()"></div>
+        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="text" inputmode="numeric" id="eq-install" value="0" oninput="fmtEq('eq-install');eqCalc()"></div>
+        <div class="eq-field"><label>Chi phí khác (đ)</label><input type="text" inputmode="numeric" id="eq-other" value="0" oninput="fmtEq('eq-other');eqCalc()"></div>
       </div>
       <div style="background:#fff;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap;">
         <span>Diện tích: <strong id="eq-area-show">0</strong> m²</span>
@@ -2421,25 +2421,41 @@ function openEqItemForm(itemIdx) {
   document.getElementById('eq-w').value       = it.w       || 0;
   document.getElementById('eq-h').value       = it.h       || 0;
   document.getElementById('eq-qty').value     = it.qty     || 1;
-  document.getElementById('eq-sell').value    = it.sellPrice || 0;
-  document.getElementById('eq-shipIn').value  = it.shipIn  || 0;
-  document.getElementById('eq-shipOut').value = it.shipOut || 0;
-  document.getElementById('eq-install').value = it.install || 0;
-  document.getElementById('eq-other').value   = it.other   || 0;
+  // Format dấu chấm nghìn khi điền giá trị vào ô
+  const _fmtV = v => { const n = Math.round(Number(v)||0); return n > 0 ? n.toLocaleString('vi-VN') : '0'; };
+  document.getElementById('eq-sell').value    = _fmtV(it.sellPrice);
+  document.getElementById('eq-shipIn').value  = _fmtV(it.shipIn);
+  document.getElementById('eq-shipOut').value = _fmtV(it.shipOut);
+  document.getElementById('eq-install').value = _fmtV(it.install);
+  document.getElementById('eq-other').value   = _fmtV(it.other);
   document.getElementById('eqEditForm').style.display = 'block';
   renderEqProducts();
   eqCalc();
 }
 
+// Format tiền trong modal sửa báo giá
+function fmtEq(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const raw = (el.value || '').replace(/[^0-9]/g, '');
+  const v = parseInt(raw) || 0;
+  el.value = v > 0 ? v.toLocaleString('vi-VN') : '0';
+}
+// Đọc giá trị tiền từ ô text có dấu chấm
+function getEqVal(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  return parseInt((el.value || '0').replace(/[^0-9]/g, '')) || 0;
+}
 function eqCalc() {
-  const w    = parseFloat(document.getElementById('eq-w').value)       || 0;
-  const h    = parseFloat(document.getElementById('eq-h').value)       || 0;
-  const qty  = parseInt(document.getElementById('eq-qty').value)       || 1;
-  const sell = parseFloat(document.getElementById('eq-sell').value)    || 0;
-  const si   = parseFloat(document.getElementById('eq-shipIn').value)  || 0;
-  const so   = parseFloat(document.getElementById('eq-shipOut').value) || 0;
-  const ins  = parseFloat(document.getElementById('eq-install').value) || 0;
-  const oth  = parseFloat(document.getElementById('eq-other').value)   || 0;
+  const w    = parseFloat(document.getElementById('eq-w').value)   || 0;
+  const h    = parseFloat(document.getElementById('eq-h').value)   || 0;
+  const qty  = parseInt(document.getElementById('eq-qty').value)   || 1;
+  const sell = getEqVal('eq-sell');
+  const si   = getEqVal('eq-shipIn');
+  const so   = getEqVal('eq-shipOut');
+  const ins  = getEqVal('eq-install');
+  const oth  = getEqVal('eq-other');
   const area   = w * h;
   const extra  = si + so + ins + oth;
   const imp    = _editItems[_editItemIdx] ? _editItems[_editItemIdx].importPrice : 0;
@@ -2458,11 +2474,11 @@ function eqSaveItem() {
   const w    = parseFloat(document.getElementById('eq-w').value)       || 0;
   const h    = parseFloat(document.getElementById('eq-h').value)       || 0;
   const qty  = parseInt(document.getElementById('eq-qty').value)       || 1;
-  const sell = parseFloat(document.getElementById('eq-sell').value)    || 0;
-  const si   = parseFloat(document.getElementById('eq-shipIn').value)  || 0;
-  const so   = parseFloat(document.getElementById('eq-shipOut').value) || 0;
-  const ins  = parseFloat(document.getElementById('eq-install').value) || 0;
-  const oth  = parseFloat(document.getElementById('eq-other').value)   || 0;
+  const sell = getEqVal('eq-sell');
+  const si   = getEqVal('eq-shipIn');
+  const so   = getEqVal('eq-shipOut');
+  const ins  = getEqVal('eq-install');
+  const oth  = getEqVal('eq-other');
   const area    = w * h;
   const extra   = si + so + ins + oth;
   const cost    = it.importPrice * area * qty + extra;
