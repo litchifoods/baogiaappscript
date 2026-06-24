@@ -1004,15 +1004,23 @@ const fmtNum = n => Math.round(n).toLocaleString('vi-VN'); // Có dấu chấm, 
 function validatePhone(el) {
   const val = el.value.replace(/[^0-9]/g, '');
   el.value = val; // chỉ cho nhập số
-  const warnId = el.id === 'multi-customer-phone' ? 'warn-multi-phone'
-               : el.id === 'bq-store-phone' ? 'warn-store-phone' : null;
+  const warnMap = {
+    'multi-customer-phone': 'warn-multi-phone',
+    'bq-store-phone':       'warn-store-phone',
+    'bq-cust-phone':        'warn-bq-cust-phone',
+  };
+  const warnId = warnMap[el.id] || null;
   if (!warnId) return;
   const warn = document.getElementById(warnId);
   if (!warn) return;
-  if (val.length === 0) { warn.classList.remove('show'); return; }
+  if (val.length === 0) {
+    warn.classList.remove('show');
+    el.style.borderColor = '';
+    return;
+  }
   const isValid = val.length === 10 && val.startsWith('0');
   warn.classList.toggle('show', !isValid);
-  el.style.borderColor = isValid || val.length === 0 ? '' : '#C0392B';
+  el.style.borderColor = isValid ? '' : '#C0392B';
 }
 
 // Format input tiền: hiện dấu chấm khi blur, số thuần khi focus
