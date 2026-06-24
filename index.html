@@ -588,7 +588,7 @@
       </div>
       <div class="form-group">
         <label>Số điện thoại</label>
-        <input type="text" id="multi-customer-phone" placeholder="VD: 0912 345 678" maxlength="10" oninput="validatePhone(this);syncCustomerToQuote()">
+        <input type="text" id="multi-customer-phone" placeholder="VD: 0912 345 678" maxlength="10" oninput="validatePhone(this,false);syncCustomerToQuote()" onblur="validatePhone(this,true)">
         <div class="phone-warning" id="warn-multi-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
       </div>
       <div class="form-group">
@@ -692,7 +692,7 @@
       <div class="form-group"><label>Tên cửa hàng / Đơn vị</label><input type="text" id="bq-store-name" placeholder="VD: Nội Thất Tính Tuyết"></div>
       <div class="form-group">
         <label>Số điện thoại</label>
-        <input type="text" id="bq-store-phone" placeholder="VD: 0912 345 678" maxlength="10" oninput="validatePhone(this)">
+        <input type="text" id="bq-store-phone" placeholder="VD: 0912 345 678" maxlength="10" oninput="validatePhone(this,false)" onblur="validatePhone(this,true)">
         <div class="phone-warning" id="warn-store-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
       </div>
       <div class="form-group full"><label>Địa chỉ</label><input type="text" id="bq-store-addr" placeholder="VD: 123 Đường Lê Lợi, TP. Hải Dương"></div>
@@ -772,7 +772,7 @@
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Số điện thoại</label>
-          <input type="text" id="bq-cust-phone" placeholder="VD: 0912 345 678" maxlength="10" style="height:38px;font-size:13px;width:100%;" oninput="validatePhone(this);syncBqCustInfo()">
+          <input type="text" id="bq-cust-phone" placeholder="VD: 0912 345 678" maxlength="10" style="height:38px;font-size:13px;width:100%;" oninput="validatePhone(this,false);syncBqCustInfo()" onblur="validatePhone(this,true)">
           <div class="phone-warning" id="warn-bq-cust-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
         </div>
         <div>
@@ -1001,7 +1001,7 @@ const fmt = n => Math.round(n).toLocaleString('vi-VN') + 'đ';
 const fmtNum = n => Math.round(n).toLocaleString('vi-VN'); // Có dấu chấm, không có 'đ'
 
 // Validate SĐT Việt Nam: 10 số, bắt đầu bằng 0
-function validatePhone(el) {
+function validatePhone(el, isBlur) {
   const val = el.value.replace(/[^0-9]/g, '');
   el.value = val; // chỉ cho nhập số
   const warnMap = {
@@ -1013,14 +1013,41 @@ function validatePhone(el) {
   if (!warnId) return;
   const warn = document.getElementById(warnId);
   if (!warn) return;
+
+  // Nếu trống → xóa cảnh báo
   if (val.length === 0) {
     warn.classList.remove('show');
     el.style.borderColor = '';
+    el.style.borderWidth = '';
     return;
   }
-  const isValid = val.length === 10 && val.startsWith('0');
-  warn.classList.toggle('show', !isValid);
-  el.style.borderColor = isValid ? '' : '#C0392B';
+
+  const startsWithZero = val.startsWith('0');
+  const isExact10 = val.length === 10;
+  const isValid = startsWithZero && isExact10;
+
+  let msg = '';
+  if (!startsWithZero && val.length > 0) {
+    msg = '⚠️ Số điện thoại Việt Nam phải bắt đầu bằng số 0';
+  } else if (val.length < 10) {
+    msg = '⚠️ Số điện thoại còn thiếu ' + (10 - val.length) + ' số (phải đủ 10 số)';
+  } else if (val.length > 10) {
+    msg = '⚠️ Số điện thoại bị thừa ' + (val.length - 10) + ' số (chỉ được 10 số)';
+  }
+
+  // Khi blur: hiện cảnh báo ngay dù chưa nhập đủ
+  // Khi đang gõ: chỉ cảnh báo nếu sai định dạng rõ ràng
+  if (isBlur || val.length >= 10 || !startsWithZero) {
+    warn.textContent = msg;
+    warn.classList.toggle('show', !isValid);
+    el.style.borderColor = isValid ? '#1B4332' : '#C0392B';
+    el.style.borderWidth = '2px';
+  } else {
+    // Đang gõ, chưa đủ 10 số nhưng bắt đầu đúng → chưa cảnh báo
+    warn.classList.remove('show');
+    el.style.borderColor = '';
+    el.style.borderWidth = '';
+  }
 }
 
 // Format input tiền: hiện dấu chấm khi blur, số thuần khi focus
