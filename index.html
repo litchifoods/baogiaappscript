@@ -676,7 +676,6 @@
 
   <!-- ACTIONS -->
   <div class="bq-actions no-print">
-    <button class="btn btn-primary" onclick="addQuoteRow()">➕ Thêm dòng sản phẩm</button>
     <button class="btn btn-secondary" onclick="addNoteRow()">📝 Thêm ghi chú</button>
     <button class="btn btn-pdf" onclick="openPrintPreview()">📄 Xuất file PDF và in</button>
     <button class="btn btn-secondary" onclick="exportQuoteHTML()">💾 Tải file HTML</button>
@@ -763,6 +762,26 @@
       </div>
     </div>
 
+    <!-- THÔNG TIN KHÁCH HÀNG TRỰC TIẾP -->
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:16px;" class="no-print" id="bq-cust-block">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-bottom:10px;">👤 Thông tin khách hàng</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Tên khách hàng</label>
+          <input type="text" id="bq-cust-name" placeholder="VD: Chị Lan" style="height:38px;font-size:13px;width:100%;" oninput="syncBqCustInfo()">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Số điện thoại</label>
+          <input type="text" id="bq-cust-phone" placeholder="VD: 0912 345 678" maxlength="10" style="height:38px;font-size:13px;width:100%;" oninput="validatePhone(this);syncBqCustInfo()">
+          <div class="phone-warning" id="warn-bq-cust-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Địa chỉ</label>
+          <input type="text" id="bq-cust-addr" placeholder="VD: 123 Lê Lợi, Hải Dương" style="height:38px;font-size:13px;width:100%;" oninput="syncBqCustInfo()">
+        </div>
+      </div>
+    </div>
+
     <!-- BẢNG BÁO GIÁ -->
     <div class="quote-table-wrap">
       <table class="quote-table" id="quoteTable">
@@ -789,6 +808,14 @@
           </tr>
         </tfoot>
       </table>
+    </div>
+
+    <!-- NÚT THÊM DÒNG — ngay dưới bảng -->
+    <div class="no-print" style="margin-top:10px;display:flex;gap:10px;align-items:center;">
+      <button class="btn btn-primary" onclick="addQuoteRow()" style="font-size:14px;padding:10px 20px;">
+        ➕ Thêm dòng sản phẩm
+      </button>
+      <span style="font-size:12px;color:var(--text-muted);">Nhấn để thêm sản phẩm mới vào bảng báo giá</span>
     </div>
 
     <!-- GHI CHÚ -->
@@ -1641,6 +1668,13 @@ function clearQuote() {
   document.getElementById('noteRows').innerHTML = '';
   document.getElementById('quoteTotal').textContent = '0đ';
   document.getElementById('bq-title').value = 'BÁO GIÁ HÀNG HÓA';
+  // Reset thông tin khách hàng
+  const bqFields = ['bq-cust-name','bq-cust-phone','bq-cust-addr'];
+  bqFields.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  const mn = document.getElementById('multi-customer-name');
+  const mp = document.getElementById('multi-customer-phone');
+  const ma = document.getElementById('multi-customer-addr');
+  if(mn) mn.value = ''; if(mp) mp.value = ''; if(ma) ma.value = '';
   setTodayDate();
   quoteRowCounter = 0; noteRowCounter = 0;
   addQuoteRow(); addNoteRow();
@@ -1656,10 +1690,13 @@ function printQuote() {
 }
 
 function exportQuoteHTML() {
-  // Lấy thông tin khách hàng
-  const _custName  = document.getElementById('multi-customer-name')?.value.trim() || '';
-  const _custPhone = document.getElementById('multi-customer-phone')?.value.trim() || '';
-  const _custAddr  = document.getElementById('multi-customer-addr')?.value.trim() || '';
+  // Ưu tiên đọc từ block khách hàng trực tiếp trong tab Báo Giá
+  const _custName  = (document.getElementById('bq-cust-name')?.value.trim())
+                  || (document.getElementById('multi-customer-name')?.value.trim()) || '';
+  const _custPhone = (document.getElementById('bq-cust-phone')?.value.trim())
+                  || (document.getElementById('multi-customer-phone')?.value.trim()) || '';
+  const _custAddr  = (document.getElementById('bq-cust-addr')?.value.trim())
+                  || (document.getElementById('multi-customer-addr')?.value.trim()) || '';
   const storeN = document.getElementById('bq-store-name').value || '';
   const storeP = document.getElementById('bq-store-phone').value || '';
   const storeA = document.getElementById('bq-store-addr').value || '';
@@ -1918,10 +1955,14 @@ function openPrintPreview() {
   const date = document.getElementById('bq-date').value || '';
   const unit = document.getElementById('bq-unit').value || '';
 
-  // Lấy thông tin khách hàng từ tab 2
-  const custName  = document.getElementById('multi-customer-name')?.value.trim() || '';
-  const custPhone = document.getElementById('multi-customer-phone')?.value.trim() || '';
-  const custAddr  = document.getElementById('multi-customer-addr')?.value.trim() || '';
+  // Ưu tiên đọc từ block khách hàng trực tiếp trong tab Báo Giá
+  // Nếu trống thì fallback sang tab 2
+  const custName  = (document.getElementById('bq-cust-name')?.value.trim())
+                 || (document.getElementById('multi-customer-name')?.value.trim()) || '';
+  const custPhone = (document.getElementById('bq-cust-phone')?.value.trim())
+                 || (document.getElementById('multi-customer-phone')?.value.trim()) || '';
+  const custAddr  = (document.getElementById('bq-cust-addr')?.value.trim())
+                 || (document.getElementById('multi-customer-addr')?.value.trim()) || '';
 
   const tbody = document.getElementById('quoteBody');
   let rowsHTML = '';
@@ -2264,6 +2305,13 @@ function sendQuoteToTab(idx) {
   // Điền tên báo giá và ngày
   document.getElementById('bq-title').value = q.name || 'BÁO GIÁ HÀNG HÓA';
   setTodayDate();
+  // Điền thông tin khách vào block bq-cust trực tiếp
+  const _bqN = document.getElementById('bq-cust-name');
+  const _bqP = document.getElementById('bq-cust-phone');
+  const _bqA = document.getElementById('bq-cust-addr');
+  if (_bqN) _bqN.value = q.custName  || '';
+  if (_bqP) _bqP.value = q.custPhone || '';
+  if (_bqA) _bqA.value = q.custAddr  || '';
 
   // Điền thông tin khách vào phần "Thông tin cửa hàng" — dùng field ghi chú
   // Thực ra ta tạo 1 ghi chú dòng đầu với thông tin khách
@@ -2337,6 +2385,21 @@ function renderSavedQuotes() {
         <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteQuote(${i})">🗑</button>
       </div>
     </div>`).join('');
+}
+
+// Đồng bộ thông tin khách từ block bq-cust vào openPrintPreview
+// (openPrintPreview đọc từ multi-customer-* nên cần sync ngược)
+function syncBqCustInfo() {
+  // Sync sang multi-customer để openPrintPreview đọc được
+  const n = document.getElementById('bq-cust-name')?.value || '';
+  const p = document.getElementById('bq-cust-phone')?.value || '';
+  const a = document.getElementById('bq-cust-addr')?.value || '';
+  const mn = document.getElementById('multi-customer-name');
+  const mp = document.getElementById('multi-customer-phone');
+  const ma = document.getElementById('multi-customer-addr');
+  if (mn) mn.value = n;
+  if (mp) mp.value = p;
+  if (ma) ma.value = a;
 }
 
 // Đồng bộ tên khách → tab Báo Giá Cho Khách
