@@ -1775,7 +1775,7 @@ function exportQuoteHTML() {
     </div>
   </div>` : ''}
   <table>
-    <thead><tr><th style="width:36px">STT</th><th>Tên sản phẩm</th><th>Mô tả chất liệu</th><th>Đơn giá (đ/m²-md)</th><th>Dài (m)</th><th>Cao (m)</th><th>DT (m²)</th><th>SL</th><th>Thành tiền</th></tr></thead>
+    <thead><tr><th style="width:36px">STT</th><th>Tên sản phẩm</th><th>Mô tả chất liệu</th><th>Đơn giá (đ/m²-md)</th><th>Dài (m)</th><th>Cao (m)</th><th>DT (m²-md)</th><th>SL</th><th>Thành tiền</th></tr></thead>
     <tbody>${rowsHTML}</tbody>
     <tfoot><tr><td colspan="8" class="lbl">TỔNG CỘNG</td><td class="tot">${totalText}</td></tr></tfoot>
   </table>
@@ -1803,42 +1803,23 @@ let logoSize = 80;
 function handleLogoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  // Kiểm tra định dạng
   if (!file.type.startsWith('image/')) {
-    alert('⚠️ Vui lòng chọn file ảnh (JPG, PNG, GIF, WebP...)');
+    alert('⚠️ Vui lòng chọn file ảnh (JPG, PNG, WebP...)');
     return;
   }
   const reader = new FileReader();
   reader.onload = function(e) {
-    const rawData = e.target.result;
-    // Nén ảnh xuống max 400px để tiết kiệm bộ nhớ và tránh lỗi localStorage
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const MAX = 400;
-      let w = img.width, h = img.height;
-      if (w > MAX || h > MAX) {
-        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-        else { w = Math.round(w * MAX / h); h = MAX; }
-      }
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      // Dùng PNG để giữ độ nét logo
-      logoDataUrl = canvas.toDataURL('image/png', 0.92);
-      applyLogoToUI(logoDataUrl);
-      try {
-        localStorage.setItem('nttt_logo_data', logoDataUrl);
-        saveLogoCfg();
-      } catch(err) {
-        console.warn('Không lưu được logo vào localStorage:', err.message);
-        // Vẫn dùng được trong phiên hiện tại
-      }
-    };
-    img.onerror = function() { alert('❌ Không đọc được file ảnh. Thử chọn file khác.'); };
-    img.src = rawData;
+    logoDataUrl = e.target.result; // dùng thẳng base64, không qua canvas
+    applyLogoToUI(logoDataUrl);
+    try {
+      localStorage.setItem('nttt_logo_data', logoDataUrl);
+      saveLogoCfg();
+    } catch(err) {
+      // File quá lớn → vẫn dùng được trong phiên, chỉ không lưu được
+      console.warn('Logo quá lớn để lưu localStorage:', err.message);
+    }
   };
-  reader.onerror = function() { alert('❌ Lỗi đọc file. Thử lại.'); };
+  reader.onerror = function() { alert('❌ Lỗi đọc file. Thử chọn file khác.'); };
   reader.readAsDataURL(file);
 }
 
@@ -2102,7 +2083,7 @@ ${custHTML}
       <th>Đơn giá</th>
       <th>Dài (m)</th>
       <th>Cao (m)</th>
-      <th>DT (m²)</th>
+      <th>DT (m²-md)</th>
       <th>SL</th>
       <th>Thành tiền</th>
     </tr>
@@ -2322,18 +2303,8 @@ function sendQuoteToTab(idx) {
       recalcRowArea(rowId);
     });
 
-    // Thêm ghi chú thông tin khách
-    if (q.custName || q.custPhone || q.custAddr) {
-      addNoteRow();
-      const noteInp = document.querySelector('#noteRows .note-row:last-child input');
-      if (noteInp) {
-        const parts = [];
-        if (q.custName)  parts.push('KH: ' + q.custName);
-        if (q.custPhone) parts.push('ĐT: ' + q.custPhone);
-        if (q.custAddr)  parts.push('Địa chỉ: ' + q.custAddr);
-        noteInp.value = parts.join(' | ');
-      }
-    }
+    // Thông tin khách đã hiển thị trong block riêng khi in PDF
+    // Không cần thêm vào ghi chú nữa
 
     recalcQuoteTotal();
     alert('✅ Đã chuyển báo giá "' + q.name + '" sang tab Báo Giá Cho Khách!');
