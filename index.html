@@ -707,7 +707,7 @@
       <label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:8px;">🖼️ Logo cửa hàng — sẽ hiển thị <strong>cạnh thông tin</strong> trên báo giá (tuỳ chọn)</label>
       <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
         <!-- Upload zone -->
-        <div id="logoUploadArea" class="logo-upload-area" style="width:140px;min-height:80px;flex-shrink:0;" onclick="document.getElementById('logoFileInput').click()">
+        <div id="logoUploadArea" class="logo-upload-area" style="width:140px;min-height:80px;flex-shrink:0;" onclick="var fi=document.getElementById('logoFileInput');fi.value='';fi.click()">
           <input type="file" id="logoFileInput" accept="image/*" onchange="handleLogoUpload(event)">
           <div id="logoPlaceholder" style="color:var(--text-muted);font-size:12px;padding:8px 0;">📷 Nhấn để<br>tải logo lên</div>
           <div id="logoPreviewWrap" style="display:none;" onclick="event.stopPropagation()">
@@ -1656,6 +1656,10 @@ function printQuote() {
 }
 
 function exportQuoteHTML() {
+  // Lấy thông tin khách hàng
+  const _custName  = document.getElementById('multi-customer-name')?.value.trim() || '';
+  const _custPhone = document.getElementById('multi-customer-phone')?.value.trim() || '';
+  const _custAddr  = document.getElementById('multi-customer-addr')?.value.trim() || '';
   const storeN = document.getElementById('bq-store-name').value || '';
   const storeP = document.getElementById('bq-store-phone').value || '';
   const storeA = document.getElementById('bq-store-addr').value || '';
@@ -1762,6 +1766,14 @@ function exportQuoteHTML() {
   ${exportHdrHTML}
   <div class="bq-ttl">${title}</div>
   <div class="bq-date">${date}</div>
+  ${(_custName||_custPhone||_custAddr) ? `<div style="border:1px solid #E2DDD4;border-radius:8px;padding:10px 14px;margin-bottom:16px;background:#FAF8F3;">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#B7882A;margin-bottom:6px;">THÔNG TIN KHÁCH HÀNG</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px 24px;font-size:12px;">
+      ${_custName  ? `<div><span style="color:#6B6358">Khách hàng:</span> <strong>${_custName}</strong></div>` : ''}
+      ${_custPhone ? `<div><span style="color:#6B6358">Điện thoại:</span> <strong>${_custPhone}</strong></div>` : ''}
+      ${_custAddr  ? `<div style="width:100%"><span style="color:#6B6358">Địa chỉ:</span> ${_custAddr}</div>` : ''}
+    </div>
+  </div>` : ''}
   <table>
     <thead><tr><th style="width:36px">STT</th><th>Tên sản phẩm</th><th>Mô tả chất liệu</th><th>Đơn giá (đ/m²-md)</th><th>Dài (m)</th><th>Cao (m)</th><th>DT (m²)</th><th>SL</th><th>Thành tiền</th></tr></thead>
     <tbody>${rowsHTML}</tbody>
@@ -1809,12 +1821,19 @@ function handleLogoUpload(event) {
 
 // Áp dụng logo lên giao diện
 function applyLogoToUI(dataUrl) {
-  document.getElementById('logoImg').src = dataUrl;
-  document.getElementById('logoImg').style.maxHeight = logoSize + 'px';
-  document.getElementById('logoPlaceholder').style.display = 'none';
-  document.getElementById('logoPreviewWrap').style.display = 'block';
-  document.getElementById('logoControlsPanel').style.display = 'block';
-  document.getElementById('logoUploadArea').style.cursor = 'default';
+  const img = document.getElementById('logoImg');
+  if (img) { img.src = dataUrl; img.style.maxHeight = logoSize + 'px'; }
+  const ph = document.getElementById('logoPlaceholder');
+  const pw = document.getElementById('logoPreviewWrap');
+  const cp = document.getElementById('logoControlsPanel');
+  const ua = document.getElementById('logoUploadArea');
+  if (ph) ph.style.display = 'none';
+  if (pw) pw.style.display = 'block';
+  if (cp) cp.style.display = 'block';
+  // Giữ cursor pointer để vẫn click thay logo được
+  if (ua) ua.style.cursor = 'pointer';
+  // Cập nhật text placeholder → "Nhấn để thay logo"
+  if (ph) ph.innerHTML = '🔄 Nhấn để<br>thay logo';
 }
 
 // Lưu cài đặt logo (align, vAlign, size)
@@ -1872,13 +1891,18 @@ function setLogoSize(val) {
 
 function removeLogo() {
   logoDataUrl = null;
-  document.getElementById('logoFileInput').value = '';
-  document.getElementById('logoImg').src = '';
-  document.getElementById('logoPlaceholder').style.display = 'block';
-  document.getElementById('logoPreviewWrap').style.display = 'none';
-  document.getElementById('logoControlsPanel').style.display = 'none';
-  document.getElementById('logoUploadArea').style.cursor = 'pointer';
-  // Xóa khỏi localStorage
+  const fi = document.getElementById('logoFileInput');
+  const img = document.getElementById('logoImg');
+  const ph = document.getElementById('logoPlaceholder');
+  const pw2 = document.getElementById('logoPreviewWrap');
+  const cp = document.getElementById('logoControlsPanel');
+  const ua = document.getElementById('logoUploadArea');
+  if (fi) fi.value = '';
+  if (img) img.src = '';
+  if (ph) { ph.style.display = 'block'; ph.innerHTML = '📷 Nhấn để<br>tải logo lên'; }
+  if (pw2) pw2.style.display = 'none';
+  if (cp) cp.style.display = 'none';
+  if (ua) ua.style.cursor = 'pointer';
   try {
     localStorage.removeItem('nttt_logo_data');
     localStorage.removeItem('nttt_logo_cfg');
@@ -1896,6 +1920,11 @@ function openPrintPreview() {
   const title = document.getElementById('bq-title').value || 'BÁO GIÁ HÀNG HÓA';
   const date = document.getElementById('bq-date').value || '';
   const unit = document.getElementById('bq-unit').value || '';
+
+  // Lấy thông tin khách hàng từ tab 2
+  const custName  = document.getElementById('multi-customer-name')?.value.trim() || '';
+  const custPhone = document.getElementById('multi-customer-phone')?.value.trim() || '';
+  const custAddr  = document.getElementById('multi-customer-addr')?.value.trim() || '';
 
   const tbody = document.getElementById('quoteBody');
   let rowsHTML = '';
@@ -1925,16 +1954,19 @@ function openPrintPreview() {
     </tr>`;
   }
 
+  // Ghi chú — lọc bỏ dòng thông tin khách (đã hiện riêng ở trên)
   let notesHTML = '';
   document.getElementById('noteRows').querySelectorAll('input[type=text]').forEach(inp => {
-    if (inp.value.trim()) notesHTML += `<div class="note-line">• ${inp.value}</div>`;
+    const v = inp.value.trim();
+    if (v && !v.startsWith('KH:')) notesHTML += `<div class="note-line">• ${v}</div>`;
   });
   const totalText = document.getElementById('quoteTotal').textContent;
 
   const vAlignMap = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
   const va = vAlignMap[logoVAlign] || 'center';
+  // Logo: dùng trực tiếp logoDataUrl (base64) — luôn hoạt động kể cả popup
   let logoTag = logoDataUrl
-    ? `<img src="${logoDataUrl}" style="max-height:${logoSize}px;max-width:180px;object-fit:contain;display:block;">`
+    ? `<img src="${logoDataUrl}" style="max-height:${logoSize}px;max-width:180px;object-fit:contain;display:block;" crossorigin="anonymous">`
     : '';
 
   let storeInfoHTML = `
@@ -1969,6 +2001,17 @@ function openPrintPreview() {
     </div>`;
   }
 
+  // Block thông tin khách hàng (hiện dưới tiêu đề)
+  const custHTML = (custName || custPhone || custAddr) ? `
+  <div class="cust-box">
+    <div class="cust-title">THÔNG TIN KHÁCH HÀNG</div>
+    <div class="cust-grid">
+      ${custName  ? `<div class="cust-item"><span class="cust-lbl">Khách hàng:</span> <strong>${custName}</strong></div>` : ''}
+      ${custPhone ? `<div class="cust-item"><span class="cust-lbl">Điện thoại:</span> <strong>${custPhone}</strong></div>` : ''}
+      ${custAddr  ? `<div class="cust-item cust-full"><span class="cust-lbl">Địa chỉ:</span> ${custAddr}</div>` : ''}
+    </div>
+  </div>` : '';
+
   const html = `<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1988,7 +2031,15 @@ function openPrintPreview() {
   .slogan { font-style: italic; }
   .badge { background: #B7882A; color: #fff; font-size: 11px; font-weight: 700; padding: 5px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .bq-title { font-size: 17px; font-weight: 700; color: #1B4332; letter-spacing: 2px; text-align: center; margin-bottom: 3px; }
-  .bq-date { font-size: 12px; color: #6B6358; text-align: center; margin-bottom: 18px; }
+  .bq-date { font-size: 12px; color: #6B6358; text-align: center; margin-bottom: 14px; }
+  /* Thông tin khách hàng */
+  .cust-box { border: 1px solid #E2DDD4; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; background: #FAF8F3; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cust-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #B7882A; margin-bottom: 6px; }
+  .cust-grid { display: flex; flex-wrap: wrap; gap: 4px 24px; }
+  .cust-item { font-size: 12px; color: #1A1208; }
+  .cust-full { width: 100%; }
+  .cust-lbl { color: #6B6358; }
+  /* Bảng */
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   thead tr { background: #1B4332; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   th { color: #fff; padding: 9px 7px; font-weight: 600; font-size: 11px; text-align: center; }
@@ -2006,22 +2057,25 @@ function openPrintPreview() {
   .print-guide strong { display: block; font-size: 14px; margin-bottom: 6px; }
   .print-guide ol { padding-left: 20px; margin-top: 4px; }
   .print-guide li { margin: 3px 0; }
-  @media print { .print-guide { display: none !important; } }
+  @media print {
+    .print-guide { display: none !important; }
+  }
 </style>
 </head>
 <body>
 <div class="print-guide">
-  <strong>📄 Hướng dẫn lưu PDF (chỉ hiện khi xem, không in ra):</strong>
+  <strong>📄 Hướng dẫn lưu PDF — Bỏ tích "Headers and footers" để xóa chữ thừa:</strong>
   <ol>
     <li>Nhấn <strong>Ctrl + P</strong></li>
-    <li>Ở mục <strong>"Máy in"</strong> → chọn: <strong>Save as PDF</strong> hoặc <strong>Microsoft Print to PDF</strong></li>
-    <li>Bỏ tích <strong>"Headers and footers"</strong> để không có chữ thừa</li>
-    <li>Nhấn <strong>Save</strong> → chọn nơi lưu → xong!</li>
+    <li>Ở mục <strong>"Máy in"</strong> → chọn: <strong>Save as PDF</strong></li>
+    <li>Mở <strong>"More settings"</strong> → bỏ tích <strong>"Headers and footers"</strong></li>
+    <li>Nhấn <strong>Save</strong> → xong!</li>
   </ol>
 </div>
 <div class="hdr-wrap">${hdrHTML}</div>
 <div class="bq-title">${title}</div>
 <div class="bq-date">${date}</div>
+${custHTML}
 <table>
   <thead>
     <tr>
@@ -2047,7 +2101,6 @@ function openPrintPreview() {
 ${notesHTML ? '<div class="notes-box"><div class="notes-title">Ghi chú</div>' + notesHTML + '</div>' : ''}
 <div class="footer-unit"><strong style="color:#1B4332">${unit}</strong></div>
 <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script>
-
 </body>
 </html>`;
 
