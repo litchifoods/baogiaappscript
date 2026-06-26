@@ -827,6 +827,29 @@
       <div class="note-row-wrap" id="noteRows"></div>
     </div>
 
+    <!-- ĐẶT CỌC & CÒN LẠI -->
+    <div style="display:flex;justify-content:flex-end;margin-top:18px;" class="no-print" id="bq-payment-block">
+      <div style="background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px 22px;min-width:340px;box-shadow:var(--shadow);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-bottom:12px;">💰 Thanh toán</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <label style="font-size:13px;color:var(--text-muted);width:110px;flex-shrink:0;">Đã đặt cọc (đ):</label>
+            <input type="text" inputmode="numeric" id="bq-deposit"
+              placeholder="Không nhập nếu chưa cọc"
+              style="flex:1;height:36px;font-size:13px;text-align:right;"
+              oninput="fmtPaymentInput('bq-deposit');calcRemaining()">
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <label style="font-size:13px;color:var(--text-muted);width:110px;flex-shrink:0;">Còn phải trả (đ):</label>
+            <input type="text" id="bq-remaining" readonly
+              placeholder="Tự động tính"
+              style="flex:1;height:36px;font-size:13px;text-align:right;background:#f0eee8;color:var(--success);font-weight:700;cursor:not-allowed;">
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">💡 Nhập số tiền đặt cọc → Còn lại tự động tính. Để trống nếu chưa đặt cọc.</div>
+      </div>
+    </div>
+
     <!-- ĐƠN VỊ BÁO GIÁ -->
     <div class="bq-unit-row">
       <div class="bq-unit-box">
@@ -1648,6 +1671,7 @@ function recalcQuoteTotal() {
     total += parseInt((el.textContent || '0').replace(/[^0-9]/g,'')) || 0;
   });
   document.getElementById('quoteTotal').textContent = fmt(total);
+  calcRemaining(); // cập nhật còn lại mỗi khi tổng thay đổi
 }
 function removeQuoteRow(rowId) {
   const row = document.getElementById('row-' + rowId);
@@ -1704,7 +1728,7 @@ function clearQuote() {
   document.getElementById('quoteTotal').textContent = '0đ';
   document.getElementById('bq-title').value = 'BÁO GIÁ HÀNG HÓA';
   // Reset thông tin khách hàng
-  const bqFields = ['bq-cust-name','bq-cust-phone','bq-cust-addr'];
+  const bqFields = ['bq-cust-name','bq-cust-phone','bq-cust-addr','bq-deposit','bq-remaining'];
   bqFields.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   const mn = document.getElementById('multi-customer-name');
   const mp = document.getElementById('multi-customer-phone');
@@ -1741,6 +1765,29 @@ function exportQuoteHTML() {
   const title = document.getElementById('bq-title').value || 'BÁO GIÁ HÀNG HÓA';
   const date = document.getElementById('bq-date').value || '';
   const unit = document.getElementById('bq-unit').value || '';
+
+  // Block thanh toán cho export HTML
+  const _expDepRaw  = (document.getElementById('bq-deposit')?.value || '').replace(/[^0-9]/g,'');
+  const _expDep     = parseInt(_expDepRaw) || 0;
+  const _expTotal   = parseInt((document.getElementById('quoteTotal')?.textContent || '0').replace(/[^0-9]/g,'')) || 0;
+  const _expRem     = _expTotal - _expDep;
+  const exportPaymentHTML = _expDep > 0 ? `
+  <div style="margin-top:18px;display:flex;justify-content:flex-end;">
+    <table style="border-collapse:collapse;font-size:13px;min-width:300px;">
+      <tr>
+        <td style="padding:7px 14px;color:#6B6358;border:1px solid #E2DDD4;background:#FAF8F3;">Tổng giá trị hợp đồng</td>
+        <td style="padding:7px 14px;text-align:right;font-weight:600;border:1px solid #E2DDD4;background:#FAF8F3;">${document.getElementById('quoteTotal').textContent}</td>
+      </tr>
+      <tr>
+        <td style="padding:7px 14px;color:#6B6358;border:1px solid #E2DDD4;">Đã đặt cọc</td>
+        <td style="padding:7px 14px;text-align:right;font-weight:600;color:#B7882A;border:1px solid #E2DDD4;">${_expDep.toLocaleString('vi-VN')}đ</td>
+      </tr>
+      <tr>
+        <td style="padding:9px 14px;font-weight:700;color:#fff;background:#1B4332;border:1px solid #1B4332;">Còn phải thanh toán</td>
+        <td style="padding:9px 14px;text-align:right;font-weight:700;font-size:15px;color:#fff;background:#1B4332;border:1px solid #1B4332;">${_expRem.toLocaleString('vi-VN')}đ</td>
+      </tr>
+    </table>
+  </div>` : '';
 
   const tbody = document.getElementById('quoteBody');
   let rowsHTML = '';
@@ -1852,6 +1899,7 @@ function exportQuoteHTML() {
     <tfoot><tr><td colspan="8" class="lbl">TỔNG CỘNG</td><td class="tot">${totalText}</td></tr></tfoot>
   </table>
   ${notesHTML ? '<div class="notes"><h4>Ghi chú</h4>' + notesHTML + '</div>' : ''}
+  ${exportPaymentHTML}
   <div class="unit-row"><div class="unit-box"><div class="unit-lbl">Đơn vị báo giá</div><div class="unit-name">${unit}</div></div></div>
 </div>
 </body></html>`;
@@ -2035,6 +2083,29 @@ function openPrintPreview() {
   });
   const totalText = document.getElementById('quoteTotal').textContent;
 
+  // Block thanh toán — chỉ hiện nếu nhập đặt cọc
+  const _depositRaw = (document.getElementById('bq-deposit')?.value || '').replace(/[^0-9]/g,'');
+  const _deposit    = parseInt(_depositRaw) || 0;
+  const _total      = parseInt((totalText || '0').replace(/[^0-9]/g,'')) || 0;
+  const _remaining  = _total - _deposit;
+  const paymentHTML = _deposit > 0 ? `
+  <div style="margin-top:18px;display:flex;justify-content:flex-end;">
+    <table style="border-collapse:collapse;font-size:13px;min-width:300px;">
+      <tr>
+        <td style="padding:7px 14px;color:#6B6358;border:1px solid #E2DDD4;background:#FAF8F3;">Tổng giá trị hợp đồng</td>
+        <td style="padding:7px 14px;text-align:right;font-weight:600;border:1px solid #E2DDD4;background:#FAF8F3;">${totalText}</td>
+      </tr>
+      <tr>
+        <td style="padding:7px 14px;color:#6B6358;border:1px solid #E2DDD4;">Đã đặt cọc</td>
+        <td style="padding:7px 14px;text-align:right;font-weight:600;color:#B7882A;border:1px solid #E2DDD4;">${_deposit.toLocaleString('vi-VN')}đ</td>
+      </tr>
+      <tr style="-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+        <td style="padding:9px 14px;font-weight:700;color:#fff;background:#1B4332;border:1px solid #1B4332;">Còn phải thanh toán</td>
+        <td style="padding:9px 14px;text-align:right;font-weight:700;font-size:15px;color:#fff;background:#1B4332;border:1px solid #1B4332;">${_remaining.toLocaleString('vi-VN')}đ</td>
+      </tr>
+    </table>
+  </div>` : '';
+
   const vAlignMap = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
   const va = vAlignMap[logoVAlign] || 'center';
   // Logo: dùng trực tiếp logoDataUrl (base64) — luôn hoạt động kể cả popup
@@ -2173,6 +2244,7 @@ ${custHTML}
   </tfoot>
 </table>
 ${notesHTML ? '<div class="notes-box"><div class="notes-title">Ghi chú</div>' + notesHTML + '</div>' : ''}
+${paymentHTML}
 <div class="footer-unit"><strong style="color:#1B4332">${unit}</strong></div>
 <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script>
 </body>
@@ -2529,6 +2601,33 @@ function openEqItemForm(itemIdx) {
   document.getElementById('eqEditForm').style.display = 'block';
   renderEqProducts();
   eqCalc();
+}
+
+// Format tiền ô thanh toán (đặt cọc)
+function fmtPaymentInput(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const raw = (el.value || '').replace(/[^0-9]/g, '');
+  const v = parseInt(raw) || 0;
+  el.value = v > 0 ? v.toLocaleString('vi-VN') : '';
+  calcRemaining();
+}
+
+// Tính số tiền còn phải thanh toán
+function calcRemaining() {
+  const totalEl   = document.getElementById('quoteTotal');
+  const depositEl = document.getElementById('bq-deposit');
+  const remEl     = document.getElementById('bq-remaining');
+  if (!totalEl || !depositEl || !remEl) return;
+  const total   = parseInt((totalEl.textContent || '0').replace(/[^0-9]/g, '')) || 0;
+  const deposit = parseInt((depositEl.value   || '0').replace(/[^0-9]/g, '')) || 0;
+  if (!depositEl.value.trim()) {
+    remEl.value = '';
+    return;
+  }
+  const remaining = total - deposit;
+  remEl.value = remaining.toLocaleString('vi-VN') + 'đ';
+  remEl.style.color = remaining < 0 ? 'var(--red)' : 'var(--success)';
 }
 
 // Format tiền trong modal sửa báo giá
