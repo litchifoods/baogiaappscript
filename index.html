@@ -3,7 +3,6 @@
 <head>
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/litchifoods/baogiaappscript/main/Favi%20baogia%20512x512.png">
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com https://fonts.googleapis.com; default-src 'self' 'unsafe-inline' https: data:; img-src 'self' data: https: blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dự Kiến Báo Giá – Nội Thất Tính Tuyết</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -286,9 +285,9 @@
     font-family: 'Be Vietnam Pro', sans-serif; transition: all 0.15s;
   }
   .col-picker-toggle:hover { border-color: var(--green); color: var(--green); }
-  .col-picker-panel { display: none; margin-top: 10px; background: var(--cream); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; max-width: 100%; overflow-x: hidden; }
+  .col-picker-panel { display: none; margin-top: 10px; background: var(--cream); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
   .col-picker-panel.open { display: block; }
-  .col-picker-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .col-picker-grid { display: flex; flex-wrap: wrap; gap: 8px; }
   .col-chip {
     display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px;
     border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer;
@@ -369,11 +368,6 @@
     border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
     display: none; text-align: center;
   }
-  .phone-warning {
-    font-size: 11px; color: #C0392B; margin-top: 3px; display: none;
-    font-weight: 500;
-  }
-  .phone-warning.show { display: block; }
   .login-error.show { display: block; }
   .login-footer { text-align: center; margin-top: 20px; font-size: 11px; color: #aaa; }
   .login-spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
@@ -588,8 +582,7 @@
       </div>
       <div class="form-group">
         <label>Số điện thoại</label>
-        <input type="text" id="multi-customer-phone" placeholder="VD: 0912 345 678" maxlength="10" oninput="validatePhone(this,false);syncCustomerToQuote()" onblur="validatePhone(this,true)">
-        <div class="phone-warning" id="warn-multi-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
+        <input type="text" id="multi-customer-phone" placeholder="VD: 0912 345 678" oninput="syncCustomerToQuote()">
       </div>
       <div class="form-group">
         <label>Địa chỉ khách hàng</label>
@@ -676,6 +669,7 @@
 
   <!-- ACTIONS -->
   <div class="bq-actions no-print">
+    <button class="btn btn-primary" onclick="addQuoteRow()">➕ Thêm dòng sản phẩm</button>
     <button class="btn btn-secondary" onclick="addNoteRow()">📝 Thêm ghi chú</button>
     <button class="btn btn-pdf" onclick="openPrintPreview()">📄 Xuất file PDF và in</button>
     <button class="btn btn-secondary" onclick="exportQuoteHTML()">💾 Tải file HTML</button>
@@ -690,11 +684,7 @@
     </div>
     <div class="bq-store-fields">
       <div class="form-group"><label>Tên cửa hàng / Đơn vị</label><input type="text" id="bq-store-name" placeholder="VD: Nội Thất Tính Tuyết"></div>
-      <div class="form-group">
-        <label>Số điện thoại</label>
-        <input type="text" id="bq-store-phone" placeholder="VD: 0912 345 678" maxlength="10" oninput="validatePhone(this,false)" onblur="validatePhone(this,true)">
-        <div class="phone-warning" id="warn-store-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
-      </div>
+      <div class="form-group"><label>Số điện thoại</label><input type="text" id="bq-store-phone" placeholder="VD: 0912 345 678"></div>
       <div class="form-group full"><label>Địa chỉ</label><input type="text" id="bq-store-addr" placeholder="VD: 123 Đường Lê Lợi, TP. Hải Dương"></div>
       <div class="form-group full"><label>Mô tả / Slogan cửa hàng</label><input type="text" id="bq-store-desc" placeholder="VD: Chuyên cung cấp rèm cửa & nội thất cao cấp"></div>
       <div class="form-group"><label>Email (nếu có)</label><input type="text" id="bq-store-email" placeholder="VD: noithattt@gmail.com"></div>
@@ -706,13 +696,13 @@
       <label style="font-size:12px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:8px;">🖼️ Logo cửa hàng — sẽ hiển thị <strong>cạnh thông tin</strong> trên báo giá (tuỳ chọn)</label>
       <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
         <!-- Upload zone -->
-        <label for="logoFileInput" id="logoUploadArea" class="logo-upload-area" style="width:140px;min-height:80px;flex-shrink:0;cursor:pointer;display:block;">
-          <input type="file" id="logoFileInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
-          <div id="logoPlaceholder" style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center;pointer-events:none;">📷 Nhấn để<br>tải logo lên</div>
-          <div id="logoPreviewWrap" style="display:none;">
-            <img id="logoImg" src="" alt="Logo" style="max-height:80px;max-width:120px;object-fit:contain;display:block;margin:0 auto;pointer-events:none;">
+        <div id="logoUploadArea" class="logo-upload-area" style="width:140px;min-height:80px;flex-shrink:0;" onclick="document.getElementById('logoFileInput').click()">
+          <input type="file" id="logoFileInput" accept="image/*" onchange="handleLogoUpload(event)">
+          <div id="logoPlaceholder" style="color:var(--text-muted);font-size:12px;padding:8px 0;">📷 Nhấn để<br>tải logo lên</div>
+          <div id="logoPreviewWrap" style="display:none;" onclick="event.stopPropagation()">
+            <img id="logoImg" src="" alt="Logo" style="max-height:80px;max-width:120px;object-fit:contain;display:block;margin:0 auto;">
           </div>
-        </label>
+        </div>
         <!-- Controls -->
         <div id="logoControlsPanel" style="display:none;flex:1;min-width:200px;">
           <div style="margin-bottom:10px;">
@@ -762,26 +752,6 @@
       </div>
     </div>
 
-    <!-- THÔNG TIN KHÁCH HÀNG TRỰC TIẾP -->
-    <div style="background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:16px;" class="no-print" id="bq-cust-block">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-bottom:10px;">👤 Thông tin khách hàng</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Tên khách hàng</label>
-          <input type="text" id="bq-cust-name" placeholder="VD: Chị Lan" style="height:38px;font-size:13px;width:100%;" oninput="syncBqCustInfo()">
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Số điện thoại</label>
-          <input type="text" id="bq-cust-phone" placeholder="VD: 0912 345 678" maxlength="10" style="height:38px;font-size:13px;width:100%;" oninput="validatePhone(this,false);syncBqCustInfo()" onblur="validatePhone(this,true)">
-          <div class="phone-warning" id="warn-bq-cust-phone">⚠️ SĐT Việt Nam gồm 10 số và bắt đầu bằng số 0</div>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px;">Địa chỉ</label>
-          <input type="text" id="bq-cust-addr" placeholder="VD: 123 Lê Lợi, Hải Dương" style="height:38px;font-size:13px;width:100%;" oninput="syncBqCustInfo()">
-        </div>
-      </div>
-    </div>
-
     <!-- BẢNG BÁO GIÁ -->
     <div class="quote-table-wrap">
       <table class="quote-table" id="quoteTable">
@@ -810,14 +780,6 @@
       </table>
     </div>
 
-    <!-- NÚT THÊM DÒNG — ngay dưới bảng -->
-    <div class="no-print" style="margin-top:10px;display:flex;gap:10px;align-items:center;">
-      <button class="btn btn-primary" onclick="addQuoteRow()" style="font-size:14px;padding:10px 20px;">
-        ➕ Thêm dòng sản phẩm
-      </button>
-      <span style="font-size:12px;color:var(--text-muted);">Nhấn để thêm sản phẩm mới vào bảng báo giá</span>
-    </div>
-
     <!-- GHI CHÚ -->
     <div style="margin-top:18px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
@@ -825,29 +787,6 @@
         <button class="btn btn-secondary btn-sm no-print" onclick="addPresetNotes()" title="Thêm các ghi chú mẫu phổ biến">+ Ghi chú mẫu</button>
       </div>
       <div class="note-row-wrap" id="noteRows"></div>
-    </div>
-
-    <!-- ĐẶT CỌC & CÒN LẠI -->
-    <div style="display:flex;justify-content:flex-end;margin-top:18px;" class="no-print" id="bq-payment-block">
-      <div style="background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px 22px;min-width:340px;box-shadow:var(--shadow);">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-bottom:12px;">💰 Thanh toán</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <label style="font-size:13px;color:var(--text-muted);width:110px;flex-shrink:0;">Đã đặt cọc (đ):</label>
-            <input type="text" inputmode="numeric" id="bq-deposit"
-              placeholder="Không nhập nếu chưa cọc"
-              style="flex:1;height:36px;font-size:13px;text-align:right;"
-              oninput="fmtPaymentInput('bq-deposit');calcRemaining()">
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <label style="font-size:13px;color:var(--text-muted);width:110px;flex-shrink:0;">Còn phải trả (đ):</label>
-            <input type="text" id="bq-remaining" readonly
-              placeholder="Tự động tính"
-              style="flex:1;height:36px;font-size:13px;text-align:right;background:#f0eee8;color:var(--success);font-weight:700;cursor:not-allowed;">
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">💡 Nhập số tiền đặt cọc → Còn lại tự động tính. Để trống nếu chưa đặt cọc.</div>
-      </div>
     </div>
 
     <!-- ĐƠN VỊ BÁO GIÁ -->
@@ -874,7 +813,7 @@
     <div class="modal-title" id="modalTitle">Thêm sản phẩm mới</div>
     <div class="modal-group"><label>Tên sản phẩm *</label><input type="text" id="modal-name" placeholder="VD: Rèm Cầu Vồng VIOLET"></div>
     <div class="modal-group"><label>Mô tả chất liệu / Độ cản sáng</label><input type="text" id="modal-mat" placeholder="VD: 93-98%"></div>
-    <div class="modal-group"><label>Giá nhập / m²-md (VNĐ) *</label><input type="number" id="modal-price" placeholder="VD: 350000"></div>
+    <div class="modal-group"><label>Giá nhập / m²-md (VNĐ) *</label><input type="text" inputmode="numeric" id="modal-price" placeholder="VD: 350.000"></div>
     <input type="hidden" id="modal-edit-idx">
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal()">Hủy</button>
@@ -883,67 +822,10 @@
   </div>
 </div>
 
-
-<!-- MODAL SỬA SẢN PHẨM TRONG BÁO GIÁ ĐÃ LƯU -->
-<!-- MODAL SỬA SẢN PHẨM TRONG BÁO GIÁ ĐÃ LƯU -->
-<div class="edit-quote-modal" id="editQuoteModal">
-  <div class="edit-quote-box">
-    <h3 id="editModalTitle">✏️ Sửa báo giá</h3>
-
-    <!-- Thông tin khách -->
-    <div class="eq-field-row" style="grid-template-columns:1fr 1fr 1fr;">
-      <div class="eq-field"><label>Tên khách</label><input type="text" id="eq-cust-name" placeholder="Tên khách hàng"></div>
-      <div class="eq-field"><label>Điện thoại</label><input type="text" id="eq-cust-phone" placeholder="SĐT"></div>
-      <div class="eq-field"><label>Địa chỉ</label><input type="text" id="eq-cust-addr" placeholder="Địa chỉ"></div>
-    </div>
-
-    <!-- Danh sách sản phẩm — bấm để chọn và sửa -->
-    <div class="section-title" style="margin-bottom:8px;">Bấm vào sản phẩm để sửa thông số</div>
-    <div style="overflow-x:auto;margin-bottom:14px;">
-      <table class="eq-table" id="eqProductList">
-        <thead><tr><th>#</th><th>Tên sản phẩm</th><th>Dài×Cao</th><th>SL</th><th>Giá bán/m²</th><th>Thành tiền</th></tr></thead>
-        <tbody id="eqProductBody"></tbody>
-      </table>
-    </div>
-
-    <!-- Form sửa sản phẩm đã chọn -->
-    <div id="eqEditForm" style="display:none;background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px;">
-      <div class="section-title" style="margin-bottom:10px;" id="eqEditFormTitle">Sửa thông số</div>
-      <div class="eq-field-row">
-        <div class="eq-field"><label>Chiều dài (m)</label><input type="number" id="eq-w" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Chiều cao (m)</label><input type="number" id="eq-h" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Số lượng</label><input type="number" id="eq-qty" value="1" min="1" oninput="eqCalc()"></div>
-        <div class="eq-field"><label>Giá bán / m² (đ)</label><input type="text" inputmode="numeric" id="eq-sell" placeholder="0" oninput="fmtEq('eq-sell');eqCalc()"></div>
-      </div>
-      <div class="eq-field-row">
-        <div class="eq-field"><label>VC về kho (đ)</label><input type="text" inputmode="numeric" id="eq-shipIn" value="0" oninput="fmtEq('eq-shipIn');eqCalc()"></div>
-        <div class="eq-field"><label>VC cho khách (đ)</label><input type="text" inputmode="numeric" id="eq-shipOut" value="0" oninput="fmtEq('eq-shipOut');eqCalc()"></div>
-        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="text" inputmode="numeric" id="eq-install" value="0" oninput="fmtEq('eq-install');eqCalc()"></div>
-        <div class="eq-field"><label>Chi phí khác (đ)</label><input type="text" inputmode="numeric" id="eq-other" value="0" oninput="fmtEq('eq-other');eqCalc()"></div>
-      </div>
-      <div style="background:#fff;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap;">
-        <span>Diện tích: <strong id="eq-area-show">0</strong> m²</span>
-        <span>Thành tiền: <strong id="eq-total-show" style="color:var(--green)">0đ</strong></span>
-        <span>Lợi nhuận: <strong id="eq-profit-show">0đ</strong></span>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button class="btn btn-primary btn-sm" onclick="eqSaveItem()">✅ Lưu thay đổi dòng này</button>
-        <button class="btn btn-danger btn-sm" onclick="eqDeleteItem()">🗑 Xóa dòng này</button>
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('eqEditForm').style.display='none'">✕ Đóng</button>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-      <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
-      <button class="btn btn-primary" onclick="eqSaveAll()">💾 Lưu tất cả thay đổi</button>
-    </div>
-  </div>
-</div>
-
 <script>
 // =========== GOOGLE SHEETS SYNC CONFIG ===========
 // Bước 5: Dán URL Web App của bạn vào đây (xem hướng dẫn)
-const API_URL   = 'https://script.google.com/macros/s/AKfycbyMUIWMkehTZfK8ZSk_8OxJefW0NUCEKx5ZIgRgf_tKeL1ofZJ03NbGIwuK2QLmIQ/exec';
+const API_URL   = 'https://script.google.com/macros/s/AKfycbwN9TJJKkuvipfEy1uyWeF8R0kZi2G7Tc26wYC0GxxaXTFHzVqDLzLC8kD_tkTHW00/exec';
 const API_TOKEN = 'nttt2024secret'; // Phải trùng SECRET_TOKEN trong Code.gs
 
 // =========== DATA ===========
@@ -1022,56 +904,6 @@ let PRODUCTS = loadProducts();
 
 const fmt = n => Math.round(n).toLocaleString('vi-VN') + 'đ';
 const fmtNum = n => Math.round(n).toLocaleString('vi-VN'); // Có dấu chấm, không có 'đ'
-
-// Validate SĐT Việt Nam: 10 số, bắt đầu bằng 0
-function validatePhone(el, isBlur) {
-  const val = el.value.replace(/[^0-9]/g, '');
-  el.value = val; // chỉ cho nhập số
-  const warnMap = {
-    'multi-customer-phone': 'warn-multi-phone',
-    'bq-store-phone':       'warn-store-phone',
-    'bq-cust-phone':        'warn-bq-cust-phone',
-  };
-  const warnId = warnMap[el.id] || null;
-  if (!warnId) return;
-  const warn = document.getElementById(warnId);
-  if (!warn) return;
-
-  // Nếu trống → xóa cảnh báo
-  if (val.length === 0) {
-    warn.classList.remove('show');
-    el.style.borderColor = '';
-    el.style.borderWidth = '';
-    return;
-  }
-
-  const startsWithZero = val.startsWith('0');
-  const isExact10 = val.length === 10;
-  const isValid = startsWithZero && isExact10;
-
-  let msg = '';
-  if (!startsWithZero && val.length > 0) {
-    msg = '⚠️ Số điện thoại Việt Nam phải bắt đầu bằng số 0';
-  } else if (val.length < 10) {
-    msg = '⚠️ Số điện thoại còn thiếu ' + (10 - val.length) + ' số (phải đủ 10 số)';
-  } else if (val.length > 10) {
-    msg = '⚠️ Số điện thoại bị thừa ' + (val.length - 10) + ' số (chỉ được 10 số)';
-  }
-
-  // Khi blur: hiện cảnh báo ngay dù chưa nhập đủ
-  // Khi đang gõ: chỉ cảnh báo nếu sai định dạng rõ ràng
-  if (isBlur || val.length >= 10 || !startsWithZero) {
-    warn.textContent = msg;
-    warn.classList.toggle('show', !isValid);
-    el.style.borderColor = isValid ? '#1B4332' : '#C0392B';
-    el.style.borderWidth = '2px';
-  } else {
-    // Đang gõ, chưa đủ 10 số nhưng bắt đầu đúng → chưa cảnh báo
-    warn.classList.remove('show');
-    el.style.borderColor = '';
-    el.style.borderWidth = '';
-  }
-}
 
 // Format input tiền: hiện dấu chấm khi blur, số thuần khi focus
 function formatMoneyInputs() {
@@ -1287,7 +1119,7 @@ function selectQuoteDDFixed(idx) {
   const display = document.getElementById('qdd-' + rowId + '-display');
   if (display) { display.textContent = p.name; display.classList.remove('placeholder-text'); }
   const matEl = document.getElementById('qmat-' + rowId);
-  if (matEl) matEl.value = p.mat || '';  // luôn điền mat khi chọn SP
+  if (matEl && !matEl.value) matEl.value = p.mat;
   closeQuoteDDFixed();
   recalcRow(rowId);
 }
@@ -1423,7 +1255,7 @@ function addItem() {
   const rev = sell * area * qty;
   const profit = rev - totalCost;
   const margin = rev > 0 ? (profit / rev * 100) : 0;
-  multiItems.push({ name: p.name, mat: p.mat || '', w, h, area, qty, importPrice, shipIn, shipOut, install, other, extraCost, totalCost, sellPrice: sell, rev, profit, margin });
+  multiItems.push({ name: p.name, w, h, area, qty, importPrice, shipIn, shipOut, install, other, extraCost, totalCost, sellPrice: sell, rev, profit, margin });
   renderMulti();
 }
 // ── Drag & drop sắp xếp sản phẩm ──────────────────────────
@@ -1548,22 +1380,43 @@ function openAddModal() {
   document.getElementById('modal-price').value = '';
   document.getElementById('modal-edit-idx').value = '-1';
   document.getElementById('productModal').classList.add('open');
+  _attachPriceFormat();
   setTimeout(() => document.getElementById('modal-name').focus(), 100);
+}
+
+// Gắn event format dấu chấm cho ô giá trong modal
+function _attachPriceFormat() {
+  const el = document.getElementById('modal-price');
+  if (!el || el._fmtAttached) return;
+  el._fmtAttached = true;
+  el.addEventListener('input', function() {
+    const pos = this.selectionStart;
+    const raw = this.value.replace(/[^0-9]/g, '');
+    if (!raw) { this.value = ''; return; }
+    const formatted = parseInt(raw).toLocaleString('vi-VN');
+    this.value = formatted;
+  });
+  el.addEventListener('focus', function() {
+    setTimeout(() => this.select(), 20);
+  });
 }
 function openEditModal(idx) {
   const p = PRODUCTS[idx];
   document.getElementById('modalTitle').textContent = 'Chỉnh sửa sản phẩm';
   document.getElementById('modal-name').value = p.name;
   document.getElementById('modal-mat').value = p.mat;
-  document.getElementById('modal-price').value = p.price;
+  // Hiện có dấu chấm
+  document.getElementById('modal-price').value = p.price > 0 ? Math.round(p.price).toLocaleString('vi-VN') : '';
   document.getElementById('modal-edit-idx').value = idx;
   document.getElementById('productModal').classList.add('open');
+  // Gắn event format dấu chấm
+  _attachPriceFormat();
 }
 function closeModal() { document.getElementById('productModal').classList.remove('open'); }
 function saveProduct() {
   const name = document.getElementById('modal-name').value.trim();
   const mat = document.getElementById('modal-mat').value.trim();
-  const price = parseFloat(document.getElementById('modal-price').value);
+  const price = parseInt((document.getElementById('modal-price').value || '0').replace(/[^0-9]/g, '')) || 0;
   const editIdx = parseInt(document.getElementById('modal-edit-idx').value);
   if (!name) { alert('Vui lòng nhập tên sản phẩm!'); return; }
   if (!price || price <= 0) { alert('Vui lòng nhập giá nhập hợp lệ!'); return; }
@@ -1579,7 +1432,7 @@ function refreshDropdowns() {
   renderDropdownList('sd1', document.getElementById('sd1-search')?.value || '');
   renderDropdownList('sd2', document.getElementById('sd2-search')?.value || '');
 }
-document.getElementById('productModal')?.addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.getElementById('productModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 
 // =========== TAB 4 BÁO GIÁ ===========
 function loadStoreInfo() {
@@ -1632,7 +1485,7 @@ function addQuoteRow() {
            style="width:100%;cursor:pointer;font-size:13px;">— Tìm sản phẩm —</div>
     </td>
     <td><input type="text" id="qmat-${rowId}" placeholder="Chất liệu..." style="width:100%;"></td>
-    <td><input type="text" inputmode="numeric" id="qprice-${rowId}" placeholder="0" oninput="formatQPrice('${rowId}')" style="width:100%;text-align:right;"></td>
+    <td><input type="number" id="qprice-${rowId}" placeholder="0" oninput="recalcRow('${rowId}')" style="width:100%;text-align:right;"></td>
     <td><input type="number" id="qw-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRowArea('${rowId}')" style="width:100%;text-align:right;"></td>
     <td><input type="number" id="qh-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRowArea('${rowId}')" style="width:100%;text-align:right;"></td>
     <td><input type="number" id="qarea-${rowId}" step="0.01" placeholder="0.00" oninput="recalcRow('${rowId}')" style="width:100%;text-align:right;background:#f7f5f0;"></td>
@@ -1650,16 +1503,8 @@ function recalcRowArea(rowId) {
   document.getElementById('qarea-'+rowId).value = (w * h).toFixed(2);
   recalcRow(rowId);
 }
-function formatQPrice(rowId) {
-  const el = document.getElementById('qprice-'+rowId);
-  const raw = (el.value || '').replace(/[^0-9]/g, '');
-  const v = parseInt(raw) || 0;
-  el.value = v > 0 ? v.toLocaleString('vi-VN') : '';
-  recalcRow(rowId);
-}
 function recalcRow(rowId) {
-  const priceEl = document.getElementById('qprice-'+rowId);
-  const price = parseInt((priceEl ? priceEl.value : '0').replace(/[^0-9]/g,'')) || 0;
+  const price = parseFloat(document.getElementById('qprice-'+rowId).value) || 0;
   const area = parseFloat(document.getElementById('qarea-'+rowId).value) || 0;
   const qty = parseFloat(document.getElementById('qqty-'+rowId).value) || 1;
   document.getElementById('qtotal-'+rowId).textContent = fmt(price * area * qty);
@@ -1668,10 +1513,9 @@ function recalcRow(rowId) {
 function recalcQuoteTotal() {
   let total = 0;
   document.querySelectorAll('[id^="qtotal-"]').forEach(el => {
-    total += parseInt((el.textContent || '0').replace(/[^0-9]/g,'')) || 0;
+    total += parseInt((el.textContent || '0').replace(/[^\d]/g,'')) || 0;
   });
   document.getElementById('quoteTotal').textContent = fmt(total);
-  calcRemaining(); // cập nhật còn lại mỗi khi tổng thay đổi
 }
 function removeQuoteRow(rowId) {
   const row = document.getElementById('row-' + rowId);
@@ -1727,13 +1571,6 @@ function clearQuote() {
   document.getElementById('noteRows').innerHTML = '';
   document.getElementById('quoteTotal').textContent = '0đ';
   document.getElementById('bq-title').value = 'BÁO GIÁ HÀNG HÓA';
-  // Reset thông tin khách hàng
-  const bqFields = ['bq-cust-name','bq-cust-phone','bq-cust-addr','bq-deposit','bq-remaining'];
-  bqFields.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-  const mn = document.getElementById('multi-customer-name');
-  const mp = document.getElementById('multi-customer-phone');
-  const ma = document.getElementById('multi-customer-addr');
-  if(mn) mn.value = ''; if(mp) mp.value = ''; if(ma) ma.value = '';
   setTodayDate();
   quoteRowCounter = 0; noteRowCounter = 0;
   addQuoteRow(); addNoteRow();
@@ -1749,13 +1586,6 @@ function printQuote() {
 }
 
 function exportQuoteHTML() {
-  // Ưu tiên đọc từ block khách hàng trực tiếp trong tab Báo Giá
-  const _custName  = (document.getElementById('bq-cust-name')?.value.trim())
-                  || (document.getElementById('multi-customer-name')?.value.trim()) || '';
-  const _custPhone = (document.getElementById('bq-cust-phone')?.value.trim())
-                  || (document.getElementById('multi-customer-phone')?.value.trim()) || '';
-  const _custAddr  = (document.getElementById('bq-cust-addr')?.value.trim())
-                  || (document.getElementById('multi-customer-addr')?.value.trim()) || '';
   const storeN = document.getElementById('bq-store-name').value || '';
   const storeP = document.getElementById('bq-store-phone').value || '';
   const storeA = document.getElementById('bq-store-addr').value || '';
@@ -1766,29 +1596,6 @@ function exportQuoteHTML() {
   const date = document.getElementById('bq-date').value || '';
   const unit = document.getElementById('bq-unit').value || '';
 
-  // Block thanh toán cho export HTML
-  const _expDepRaw  = (document.getElementById('bq-deposit')?.value || '').replace(/[^0-9]/g,'');
-  const _expDep     = parseInt(_expDepRaw) || 0;
-  const _expTotal   = parseInt((document.getElementById('quoteTotal')?.textContent || '0').replace(/[^0-9]/g,'')) || 0;
-  const _expRem     = _expTotal - _expDep;
-  const exportPaymentHTML = _expDep > 0 ? `
-  <div style="margin-top:18px;display:flex;justify-content:flex-end;">
-    <table style="border-collapse:collapse;font-size:13px;min-width:300px;">
-      <tr>
-        <td style="padding:7px 14px;color:#6B6358;border:1px solid #E2DDD4;background:#FAF8F3;">Tổng giá trị hợp đồng</td>
-        <td style="padding:7px 14px;text-align:right;font-weight:600;border:1px solid #E2DDD4;background:#FAF8F3;">${document.getElementById('quoteTotal').textContent}</td>
-      </tr>
-      <tr>
-        <td style="padding:7px 14px;color:#6B6358;border:1px solid #E2DDD4;">Đã đặt cọc</td>
-        <td style="padding:7px 14px;text-align:right;font-weight:600;color:#B7882A;border:1px solid #E2DDD4;">${_expDep.toLocaleString('vi-VN')}đ</td>
-      </tr>
-      <tr>
-        <td style="padding:9px 14px;font-weight:700;color:#fff;background:#1B4332;border:1px solid #1B4332;">Còn phải thanh toán</td>
-        <td style="padding:9px 14px;text-align:right;font-weight:700;font-size:15px;color:#fff;background:#1B4332;border:1px solid #1B4332;">${_expRem.toLocaleString('vi-VN')}đ</td>
-      </tr>
-    </table>
-  </div>` : '';
-
   const tbody = document.getElementById('quoteBody');
   let rowsHTML = '';
   for (const row of tbody.rows) {
@@ -1796,7 +1603,7 @@ function exportQuoteHTML() {
     const nameEl = document.getElementById('qdd-'+rowId+'-display');
     const name = nameEl && !nameEl.classList.contains('placeholder-text') ? nameEl.textContent : '';
     const mat = document.getElementById('qmat-'+rowId)?.value || '';
-    const priceRaw = document.getElementById('qprice-'+rowId)?.value || ''; const price = priceRaw.replace(/[^0-9]/g,'');
+    const price = document.getElementById('qprice-'+rowId)?.value || '';
     const w = document.getElementById('qw-'+rowId)?.value || '';
     const h = document.getElementById('qh-'+rowId)?.value || '';
     const area = document.getElementById('qarea-'+rowId)?.value || '';
@@ -1885,21 +1692,12 @@ function exportQuoteHTML() {
   ${exportHdrHTML}
   <div class="bq-ttl">${title}</div>
   <div class="bq-date">${date}</div>
-  ${(_custName||_custPhone||_custAddr) ? `<div style="border:1px solid #E2DDD4;border-radius:8px;padding:10px 14px;margin-bottom:16px;background:#FAF8F3;">
-    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#B7882A;margin-bottom:6px;">THÔNG TIN KHÁCH HÀNG</div>
-    <div style="display:flex;flex-wrap:wrap;gap:4px 24px;font-size:12px;">
-      ${_custName  ? `<div><span style="color:#6B6358">Khách hàng:</span> <strong>${_custName}</strong></div>` : ''}
-      ${_custPhone ? `<div><span style="color:#6B6358">Điện thoại:</span> <strong>${_custPhone}</strong></div>` : ''}
-      ${_custAddr  ? `<div style="width:100%"><span style="color:#6B6358">Địa chỉ:</span> ${_custAddr}</div>` : ''}
-    </div>
-  </div>` : ''}
   <table>
-    <thead><tr><th style="width:36px">STT</th><th>Tên sản phẩm</th><th>Mô tả chất liệu</th><th>Đơn giá (đ/m²-md)</th><th>Dài (m)</th><th>Cao (m)</th><th>DT (m²-md)</th><th>SL</th><th>Thành tiền</th></tr></thead>
+    <thead><tr><th style="width:36px">STT</th><th>Tên sản phẩm</th><th>Mô tả chất liệu</th><th>Đơn giá (đ/m²-md)</th><th>Dài (m)</th><th>Cao (m)</th><th>DT (m²)</th><th>SL</th><th>Thành tiền</th></tr></thead>
     <tbody>${rowsHTML}</tbody>
     <tfoot><tr><td colspan="8" class="lbl">TỔNG CỘNG</td><td class="tot">${totalText}</td></tr></tfoot>
   </table>
   ${notesHTML ? '<div class="notes"><h4>Ghi chú</h4>' + notesHTML + '</div>' : ''}
-  ${exportPaymentHTML}
   <div class="unit-row"><div class="unit-box"><div class="unit-lbl">Đơn vị báo giá</div><div class="unit-name">${unit}</div></div></div>
 </div>
 </body></html>`;
@@ -1923,36 +1721,30 @@ let logoSize = 80;
 function handleLogoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (!file.type.startsWith('image/')) {
-    alert('⚠️ Vui lòng chọn file ảnh (JPG, PNG, WebP...)');
-    return;
-  }
   const reader = new FileReader();
   reader.onload = function(e) {
-    logoDataUrl = e.target.result; // dùng thẳng base64, không qua canvas
+    logoDataUrl = e.target.result;
     applyLogoToUI(logoDataUrl);
+    // Lưu vào localStorage để tự động hiện lại lần sau
     try {
       localStorage.setItem('nttt_logo_data', logoDataUrl);
       saveLogoCfg();
     } catch(err) {
-      // File quá lớn → vẫn dùng được trong phiên, chỉ không lưu được
-      console.warn('Logo quá lớn để lưu localStorage:', err.message);
+      // Ảnh quá lớn (>5MB) không lưu được — vẫn dùng bình thường trong phiên này
+      console.warn('Logo quá lớn, không lưu được vào localStorage:', err.message);
     }
   };
-  reader.onerror = function() { alert('❌ Lỗi đọc file. Thử chọn file khác.'); };
   reader.readAsDataURL(file);
 }
 
 // Áp dụng logo lên giao diện
 function applyLogoToUI(dataUrl) {
-  const img = document.getElementById('logoImg');
-  if (img) { img.src = dataUrl; img.style.maxHeight = logoSize + 'px'; }
-  const ph  = document.getElementById('logoPlaceholder');
-  const pw  = document.getElementById('logoPreviewWrap');
-  const cp  = document.getElementById('logoControlsPanel');
-  if (ph) { ph.style.display = 'none'; ph.innerHTML = '🔄 Nhấn để<br>thay logo'; }
-  if (pw) pw.style.display = 'block';
-  if (cp) cp.style.display = 'block';
+  document.getElementById('logoImg').src = dataUrl;
+  document.getElementById('logoImg').style.maxHeight = logoSize + 'px';
+  document.getElementById('logoPlaceholder').style.display = 'none';
+  document.getElementById('logoPreviewWrap').style.display = 'block';
+  document.getElementById('logoControlsPanel').style.display = 'block';
+  document.getElementById('logoUploadArea').style.cursor = 'default';
 }
 
 // Lưu cài đặt logo (align, vAlign, size)
@@ -2010,16 +1802,13 @@ function setLogoSize(val) {
 
 function removeLogo() {
   logoDataUrl = null;
-  const fi  = document.getElementById('logoFileInput');
-  const img = document.getElementById('logoImg');
-  const ph  = document.getElementById('logoPlaceholder');
-  const pw  = document.getElementById('logoPreviewWrap');
-  const cp  = document.getElementById('logoControlsPanel');
-  if (fi)  fi.value = '';
-  if (img) img.src = '';
-  if (ph)  { ph.style.display = 'block'; ph.innerHTML = '📷 Nhấn để<br>tải logo lên'; }
-  if (pw)  pw.style.display = 'none';
-  if (cp)  cp.style.display = 'none';
+  document.getElementById('logoFileInput').value = '';
+  document.getElementById('logoImg').src = '';
+  document.getElementById('logoPlaceholder').style.display = 'block';
+  document.getElementById('logoPreviewWrap').style.display = 'none';
+  document.getElementById('logoControlsPanel').style.display = 'none';
+  document.getElementById('logoUploadArea').style.cursor = 'pointer';
+  // Xóa khỏi localStorage
   try {
     localStorage.removeItem('nttt_logo_data');
     localStorage.removeItem('nttt_logo_cfg');
@@ -2038,15 +1827,6 @@ function openPrintPreview() {
   const date = document.getElementById('bq-date').value || '';
   const unit = document.getElementById('bq-unit').value || '';
 
-  // Ưu tiên đọc từ block khách hàng trực tiếp trong tab Báo Giá
-  // Nếu trống thì fallback sang tab 2
-  const custName  = (document.getElementById('bq-cust-name')?.value.trim())
-                 || (document.getElementById('multi-customer-name')?.value.trim()) || '';
-  const custPhone = (document.getElementById('bq-cust-phone')?.value.trim())
-                 || (document.getElementById('multi-customer-phone')?.value.trim()) || '';
-  const custAddr  = (document.getElementById('bq-cust-addr')?.value.trim())
-                 || (document.getElementById('multi-customer-addr')?.value.trim()) || '';
-
   const tbody = document.getElementById('quoteBody');
   let rowsHTML = '';
   for (const row of tbody.rows) {
@@ -2054,7 +1834,7 @@ function openPrintPreview() {
     const nameEl = document.getElementById('qdd-'+rowId+'-display');
     const name = nameEl && !nameEl.classList.contains('placeholder-text') ? nameEl.textContent.trim() : '';
     const mat = document.getElementById('qmat-'+rowId)?.value || '';
-    const priceRaw = document.getElementById('qprice-'+rowId)?.value || ''; const price = priceRaw.replace(/[^0-9]/g,'');
+    const price = document.getElementById('qprice-'+rowId)?.value || '';
     const w = document.getElementById('qw-'+rowId)?.value || '';
     const h = document.getElementById('qh-'+rowId)?.value || '';
     const area = document.getElementById('qarea-'+rowId)?.value || '';
@@ -2075,42 +1855,16 @@ function openPrintPreview() {
     </tr>`;
   }
 
-  // Ghi chú — lọc bỏ dòng thông tin khách (đã hiện riêng ở trên)
   let notesHTML = '';
   document.getElementById('noteRows').querySelectorAll('input[type=text]').forEach(inp => {
-    const v = inp.value.trim();
-    if (v && !v.startsWith('KH:')) notesHTML += `<div class="note-line">• ${v}</div>`;
+    if (inp.value.trim()) notesHTML += `<div class="note-line">• ${inp.value}</div>`;
   });
   const totalText = document.getElementById('quoteTotal').textContent;
 
-  // Block thanh toán — chỉ hiện nếu nhập đặt cọc
-  const _depositRaw = (document.getElementById('bq-deposit')?.value || '').replace(/[^0-9]/g,'');
-  const _deposit    = parseInt(_depositRaw) || 0;
-  const _total      = parseInt((totalText || '0').replace(/[^0-9]/g,'')) || 0;
-  const _remaining  = _total - _deposit;
-  const paymentHTML = _deposit > 0 ? `
-  <div style="margin-top:18px;display:flex;justify-content:flex-end;">
-    <table style="border-collapse:collapse;font-size:13px;min-width:300px;">
-      <tr>
-        <td style="padding:7px 14px;color:#6B6358;border:1px solid #E2DDD4;background:#FAF8F3;">Tổng giá trị hợp đồng</td>
-        <td style="padding:7px 14px;text-align:right;font-weight:600;border:1px solid #E2DDD4;background:#FAF8F3;">${totalText}</td>
-      </tr>
-      <tr>
-        <td style="padding:7px 14px;color:#6B6358;border:1px solid #E2DDD4;">Đã đặt cọc</td>
-        <td style="padding:7px 14px;text-align:right;font-weight:600;color:#B7882A;border:1px solid #E2DDD4;">${_deposit.toLocaleString('vi-VN')}đ</td>
-      </tr>
-      <tr style="-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-        <td style="padding:9px 14px;font-weight:700;color:#fff;background:#1B4332;border:1px solid #1B4332;">Còn phải thanh toán</td>
-        <td style="padding:9px 14px;text-align:right;font-weight:700;font-size:15px;color:#fff;background:#1B4332;border:1px solid #1B4332;">${_remaining.toLocaleString('vi-VN')}đ</td>
-      </tr>
-    </table>
-  </div>` : '';
-
   const vAlignMap = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
   const va = vAlignMap[logoVAlign] || 'center';
-  // Logo: dùng trực tiếp logoDataUrl (base64) — luôn hoạt động kể cả popup
   let logoTag = logoDataUrl
-    ? `<img src="${logoDataUrl}" style="max-height:${logoSize}px;max-width:180px;object-fit:contain;display:block;" crossorigin="anonymous">`
+    ? `<img src="${logoDataUrl}" style="max-height:${logoSize}px;max-width:180px;object-fit:contain;display:block;">`
     : '';
 
   let storeInfoHTML = `
@@ -2145,27 +1899,15 @@ function openPrintPreview() {
     </div>`;
   }
 
-  // Block thông tin khách hàng (hiện dưới tiêu đề)
-  const custHTML = (custName || custPhone || custAddr) ? `
-  <div class="cust-box">
-    <div class="cust-title">THÔNG TIN KHÁCH HÀNG</div>
-    <div class="cust-grid">
-      ${custName  ? `<div class="cust-item"><span class="cust-lbl">Khách hàng:</span> <strong>${custName}</strong></div>` : ''}
-      ${custPhone ? `<div class="cust-item"><span class="cust-lbl">Điện thoại:</span> <strong>${custPhone}</strong></div>` : ''}
-      ${custAddr  ? `<div class="cust-item cust-full"><span class="cust-lbl">Địa chỉ:</span> ${custAddr}</div>` : ''}
-    </div>
-  </div>` : '';
-
   const html = `<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <title>${title}</title>
 <style>
-  @page { size: A4; margin: 0; }
+  @page { size: A4; margin: 15mm 14mm 15mm 14mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; color: #1A1208; background: #fff; font-size: 13px; padding: 15mm 14mm; }
-  @media screen { body { padding: 20px; } }
+  body { font-family: Arial, sans-serif; color: #1A1208; background: #fff; font-size: 13px; }
   .hdr-wrap { border-bottom: 2.5px solid #1B4332; padding-bottom: 14px; margin-bottom: 18px; }
   .hdr-row { display: flex; align-items: center; gap: 16px; }
   .hdr-logo { flex-shrink: 0; }
@@ -2176,15 +1918,7 @@ function openPrintPreview() {
   .slogan { font-style: italic; }
   .badge { background: #B7882A; color: #fff; font-size: 11px; font-weight: 700; padding: 5px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .bq-title { font-size: 17px; font-weight: 700; color: #1B4332; letter-spacing: 2px; text-align: center; margin-bottom: 3px; }
-  .bq-date { font-size: 12px; color: #6B6358; text-align: center; margin-bottom: 14px; }
-  /* Thông tin khách hàng */
-  .cust-box { border: 1px solid #E2DDD4; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; background: #FAF8F3; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cust-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #B7882A; margin-bottom: 6px; }
-  .cust-grid { display: flex; flex-wrap: wrap; gap: 4px 24px; }
-  .cust-item { font-size: 12px; color: #1A1208; }
-  .cust-full { width: 100%; }
-  .cust-lbl { color: #6B6358; }
-  /* Bảng */
+  .bq-date { font-size: 12px; color: #6B6358; text-align: center; margin-bottom: 18px; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   thead tr { background: #1B4332; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   th { color: #fff; padding: 9px 7px; font-weight: 600; font-size: 11px; text-align: center; }
@@ -2202,25 +1936,22 @@ function openPrintPreview() {
   .print-guide strong { display: block; font-size: 14px; margin-bottom: 6px; }
   .print-guide ol { padding-left: 20px; margin-top: 4px; }
   .print-guide li { margin: 3px 0; }
-  @media print {
-    .print-guide { display: none !important; }
-  }
+  @media print { .print-guide { display: none !important; } }
 </style>
 </head>
 <body>
 <div class="print-guide">
-  <strong>📄 Hướng dẫn lưu PDF — Bỏ tích "Headers and footers" để xóa chữ thừa:</strong>
+  <strong>📄 Hướng dẫn lưu PDF (chỉ hiện khi xem, không in ra):</strong>
   <ol>
     <li>Nhấn <strong>Ctrl + P</strong></li>
-    <li>Ở mục <strong>"Máy in"</strong> → chọn: <strong>Save as PDF</strong></li>
-    <li>Mở <strong>"More settings"</strong> → bỏ tích <strong>"Headers and footers"</strong></li>
-    <li>Nhấn <strong>Save</strong> → xong!</li>
+    <li>Ở mục <strong>"Máy in"</strong> → chọn: <strong>Save as PDF</strong> hoặc <strong>Microsoft Print to PDF</strong></li>
+    <li>Bỏ tích <strong>"Headers and footers"</strong> để không có chữ thừa</li>
+    <li>Nhấn <strong>Save</strong> → chọn nơi lưu → xong!</li>
   </ol>
 </div>
 <div class="hdr-wrap">${hdrHTML}</div>
 <div class="bq-title">${title}</div>
 <div class="bq-date">${date}</div>
-${custHTML}
 <table>
   <thead>
     <tr>
@@ -2230,7 +1961,7 @@ ${custHTML}
       <th>Đơn giá</th>
       <th>Dài (m)</th>
       <th>Cao (m)</th>
-      <th>DT (m²-md)</th>
+      <th>DT (m²)</th>
       <th>SL</th>
       <th>Thành tiền</th>
     </tr>
@@ -2244,9 +1975,72 @@ ${custHTML}
   </tfoot>
 </table>
 ${notesHTML ? '<div class="notes-box"><div class="notes-title">Ghi chú</div>' + notesHTML + '</div>' : ''}
-${paymentHTML}
 <div class="footer-unit"><strong style="color:#1B4332">${unit}</strong></div>
 <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script>
+
+<!-- QUOTE DROPDOWN FIXED PANEL (dùng chung cho tất cả row) -->
+<div class="quote-dd-fixed" id="quoteDDFixed">
+  <input class="qdd-search-inp" id="quoteDDSearch" type="text" placeholder="🔍  Gõ tên sản phẩm..."
+         oninput="filterQuoteDDFixed(this.value)"
+         onkeydown="if(event.key==='Escape')closeQuoteDDFixed()">
+  <div class="qdd-list" id="quoteDDList"></div>
+</div>
+
+<!-- MODAL SỬA SẢN PHẨM TRONG BÁO GIÁ ĐÃ LƯU -->
+<div class="edit-quote-modal" id="editQuoteModal">
+  <div class="edit-quote-box">
+    <h3 id="editModalTitle">✏️ Sửa báo giá</h3>
+
+    <!-- Thông tin khách -->
+    <div class="eq-field-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="eq-field"><label>Tên khách</label><input type="text" id="eq-cust-name" placeholder="Tên khách hàng"></div>
+      <div class="eq-field"><label>Điện thoại</label><input type="text" id="eq-cust-phone" placeholder="SĐT"></div>
+      <div class="eq-field"><label>Địa chỉ</label><input type="text" id="eq-cust-addr" placeholder="Địa chỉ"></div>
+    </div>
+
+    <!-- Danh sách sản phẩm — bấm để chọn và sửa -->
+    <div class="section-title" style="margin-bottom:8px;">Bấm vào sản phẩm để sửa thông số</div>
+    <div style="overflow-x:auto;margin-bottom:14px;">
+      <table class="eq-table" id="eqProductList">
+        <thead><tr><th>#</th><th>Tên sản phẩm</th><th>Dài×Cao</th><th>SL</th><th>Giá bán/m²</th><th>Thành tiền</th></tr></thead>
+        <tbody id="eqProductBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Form sửa sản phẩm đã chọn -->
+    <div id="eqEditForm" style="display:none;background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div class="section-title" style="margin-bottom:10px;" id="eqEditFormTitle">Sửa thông số</div>
+      <div class="eq-field-row">
+        <div class="eq-field"><label>Chiều dài (m)</label><input type="number" id="eq-w" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Chiều cao (m)</label><input type="number" id="eq-h" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Số lượng</label><input type="number" id="eq-qty" value="1" min="1" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Giá bán / m² (đ)</label><input type="number" id="eq-sell" placeholder="0" oninput="eqCalc()"></div>
+      </div>
+      <div class="eq-field-row">
+        <div class="eq-field"><label>VC về kho (đ)</label><input type="number" id="eq-shipIn" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>VC cho khách (đ)</label><input type="number" id="eq-shipOut" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="number" id="eq-install" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Chi phí khác (đ)</label><input type="number" id="eq-other" value="0" oninput="eqCalc()"></div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap;">
+        <span>Diện tích: <strong id="eq-area-show">0</strong> m²</span>
+        <span>Thành tiền: <strong id="eq-total-show" style="color:var(--green)">0đ</strong></span>
+        <span>Lợi nhuận: <strong id="eq-profit-show">0đ</strong></span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-primary btn-sm" onclick="eqSaveItem()">✅ Lưu thay đổi dòng này</button>
+        <button class="btn btn-danger btn-sm" onclick="eqDeleteItem()">🗑 Xóa dòng này</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('eqEditForm').style.display='none'">✕ Đóng</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="eqSaveAll()">💾 Lưu tất cả thay đổi</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>`;
 
@@ -2412,13 +2206,6 @@ function sendQuoteToTab(idx) {
   // Điền tên báo giá và ngày
   document.getElementById('bq-title').value = q.name || 'BÁO GIÁ HÀNG HÓA';
   setTodayDate();
-  // Điền thông tin khách vào block bq-cust trực tiếp
-  const _bqN = document.getElementById('bq-cust-name');
-  const _bqP = document.getElementById('bq-cust-phone');
-  const _bqA = document.getElementById('bq-cust-addr');
-  if (_bqN) _bqN.value = q.custName  || '';
-  if (_bqP) _bqP.value = q.custPhone || '';
-  if (_bqA) _bqA.value = q.custAddr  || '';
 
   // Điền thông tin khách vào phần "Thông tin cửa hàng" — dùng field ghi chú
   // Thực ra ta tạo 1 ghi chú dòng đầu với thông tin khách
@@ -2430,22 +2217,12 @@ function sendQuoteToTab(idx) {
       // Tên SP
       const disp = document.getElementById('qdd-' + rowId + '-display');
       if (disp) { disp.textContent = it.name; disp.classList.remove('placeholder-text'); }
-      // Chất liệu — lấy từ dữ liệu lưu, nếu không có thì tìm từ PRODUCTS
+      // Chất liệu
       const matEl = document.getElementById('qmat-' + rowId);
-      if (matEl) {
-        if (it.mat) {
-          matEl.value = it.mat;
-        } else {
-          const prodFound = PRODUCTS.find(p => p.name === it.name);
-          matEl.value = prodFound ? prodFound.mat : '';
-        }
-      }
-      // Đơn giá — format dấu chấm nghìn
+      if (matEl) matEl.value = it.mat || '';
+      // Đơn giá
       const priceEl = document.getElementById('qprice-' + rowId);
-      if (priceEl) {
-        const pv = it.sellPrice || 0;
-        priceEl.value = pv > 0 ? pv.toLocaleString('vi-VN') : '0';
-      }
+      if (priceEl) priceEl.value = it.sellPrice || 0;
       // Kích thước
       const wEl = document.getElementById('qw-' + rowId);
       const hEl = document.getElementById('qh-' + rowId);
@@ -2458,8 +2235,18 @@ function sendQuoteToTab(idx) {
       recalcRowArea(rowId);
     });
 
-    // Thông tin khách đã hiển thị trong block riêng khi in PDF
-    // Không cần thêm vào ghi chú nữa
+    // Thêm ghi chú thông tin khách
+    if (q.custName || q.custPhone || q.custAddr) {
+      addNoteRow();
+      const noteInp = document.querySelector('#noteRows .note-row:last-child input');
+      if (noteInp) {
+        const parts = [];
+        if (q.custName)  parts.push('KH: ' + q.custName);
+        if (q.custPhone) parts.push('ĐT: ' + q.custPhone);
+        if (q.custAddr)  parts.push('Địa chỉ: ' + q.custAddr);
+        noteInp.value = parts.join(' | ');
+      }
+    }
 
     recalcQuoteTotal();
     alert('✅ Đã chuyển báo giá "' + q.name + '" sang tab Báo Giá Cho Khách!');
@@ -2492,21 +2279,6 @@ function renderSavedQuotes() {
         <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteQuote(${i})">🗑</button>
       </div>
     </div>`).join('');
-}
-
-// Đồng bộ thông tin khách từ block bq-cust vào openPrintPreview
-// (openPrintPreview đọc từ multi-customer-* nên cần sync ngược)
-function syncBqCustInfo() {
-  // Sync sang multi-customer để openPrintPreview đọc được
-  const n = document.getElementById('bq-cust-name')?.value || '';
-  const p = document.getElementById('bq-cust-phone')?.value || '';
-  const a = document.getElementById('bq-cust-addr')?.value || '';
-  const mn = document.getElementById('multi-customer-name');
-  const mp = document.getElementById('multi-customer-phone');
-  const ma = document.getElementById('multi-customer-addr');
-  if (mn) mn.value = n;
-  if (mp) mp.value = p;
-  if (ma) ma.value = a;
 }
 
 // Đồng bộ tên khách → tab Báo Giá Cho Khách
@@ -2591,68 +2363,25 @@ function openEqItemForm(itemIdx) {
   document.getElementById('eq-w').value       = it.w       || 0;
   document.getElementById('eq-h').value       = it.h       || 0;
   document.getElementById('eq-qty').value     = it.qty     || 1;
-  // Format dấu chấm nghìn khi điền giá trị vào ô
-  const _fmtV = v => { const n = Math.round(Number(v)||0); return n > 0 ? n.toLocaleString('vi-VN') : '0'; };
-  document.getElementById('eq-sell').value    = _fmtV(it.sellPrice);
-  document.getElementById('eq-shipIn').value  = _fmtV(it.shipIn);
-  document.getElementById('eq-shipOut').value = _fmtV(it.shipOut);
-  document.getElementById('eq-install').value = _fmtV(it.install);
-  document.getElementById('eq-other').value   = _fmtV(it.other);
+  document.getElementById('eq-sell').value    = it.sellPrice || 0;
+  document.getElementById('eq-shipIn').value  = it.shipIn  || 0;
+  document.getElementById('eq-shipOut').value = it.shipOut || 0;
+  document.getElementById('eq-install').value = it.install || 0;
+  document.getElementById('eq-other').value   = it.other   || 0;
   document.getElementById('eqEditForm').style.display = 'block';
   renderEqProducts();
   eqCalc();
 }
 
-// Format tiền ô thanh toán (đặt cọc)
-function fmtPaymentInput(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const raw = (el.value || '').replace(/[^0-9]/g, '');
-  const v = parseInt(raw) || 0;
-  el.value = v > 0 ? v.toLocaleString('vi-VN') : '';
-  calcRemaining();
-}
-
-// Tính số tiền còn phải thanh toán
-function calcRemaining() {
-  const totalEl   = document.getElementById('quoteTotal');
-  const depositEl = document.getElementById('bq-deposit');
-  const remEl     = document.getElementById('bq-remaining');
-  if (!totalEl || !depositEl || !remEl) return;
-  const total   = parseInt((totalEl.textContent || '0').replace(/[^0-9]/g, '')) || 0;
-  const deposit = parseInt((depositEl.value   || '0').replace(/[^0-9]/g, '')) || 0;
-  if (!depositEl.value.trim()) {
-    remEl.value = '';
-    return;
-  }
-  const remaining = total - deposit;
-  remEl.value = remaining.toLocaleString('vi-VN') + 'đ';
-  remEl.style.color = remaining < 0 ? 'var(--red)' : 'var(--success)';
-}
-
-// Format tiền trong modal sửa báo giá
-function fmtEq(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const raw = (el.value || '').replace(/[^0-9]/g, '');
-  const v = parseInt(raw) || 0;
-  el.value = v > 0 ? v.toLocaleString('vi-VN') : '0';
-}
-// Đọc giá trị tiền từ ô text có dấu chấm
-function getEqVal(id) {
-  const el = document.getElementById(id);
-  if (!el) return 0;
-  return parseInt((el.value || '0').replace(/[^0-9]/g, '')) || 0;
-}
 function eqCalc() {
-  const w    = parseFloat(document.getElementById('eq-w').value)   || 0;
-  const h    = parseFloat(document.getElementById('eq-h').value)   || 0;
-  const qty  = parseInt(document.getElementById('eq-qty').value)   || 1;
-  const sell = getEqVal('eq-sell');
-  const si   = getEqVal('eq-shipIn');
-  const so   = getEqVal('eq-shipOut');
-  const ins  = getEqVal('eq-install');
-  const oth  = getEqVal('eq-other');
+  const w    = parseFloat(document.getElementById('eq-w').value)       || 0;
+  const h    = parseFloat(document.getElementById('eq-h').value)       || 0;
+  const qty  = parseInt(document.getElementById('eq-qty').value)       || 1;
+  const sell = parseFloat(document.getElementById('eq-sell').value)    || 0;
+  const si   = parseFloat(document.getElementById('eq-shipIn').value)  || 0;
+  const so   = parseFloat(document.getElementById('eq-shipOut').value) || 0;
+  const ins  = parseFloat(document.getElementById('eq-install').value) || 0;
+  const oth  = parseFloat(document.getElementById('eq-other').value)   || 0;
   const area   = w * h;
   const extra  = si + so + ins + oth;
   const imp    = _editItems[_editItemIdx] ? _editItems[_editItemIdx].importPrice : 0;
@@ -2671,11 +2400,11 @@ function eqSaveItem() {
   const w    = parseFloat(document.getElementById('eq-w').value)       || 0;
   const h    = parseFloat(document.getElementById('eq-h').value)       || 0;
   const qty  = parseInt(document.getElementById('eq-qty').value)       || 1;
-  const sell = getEqVal('eq-sell');
-  const si   = getEqVal('eq-shipIn');
-  const so   = getEqVal('eq-shipOut');
-  const ins  = getEqVal('eq-install');
-  const oth  = getEqVal('eq-other');
+  const sell = parseFloat(document.getElementById('eq-sell').value)    || 0;
+  const si   = parseFloat(document.getElementById('eq-shipIn').value)  || 0;
+  const so   = parseFloat(document.getElementById('eq-shipOut').value) || 0;
+  const ins  = parseFloat(document.getElementById('eq-install').value) || 0;
+  const oth  = parseFloat(document.getElementById('eq-other').value)   || 0;
   const area    = w * h;
   const extra   = si + so + ins + oth;
   const cost    = it.importPrice * area * qty + extra;
@@ -2714,7 +2443,7 @@ function eqSaveAll() {
 }
 
 // Đóng modal khi click ra ngoài
-document.getElementById('editQuoteModal')?.addEventListener('click', function(e) {
+document.getElementById('editQuoteModal').addEventListener('click', function(e) {
   if (e.target === this) closeEditModal();
 });
 
@@ -2855,14 +2584,14 @@ setInterval(() => syncFromSheet(false), 2 * 60 * 1000); // Tự sync mỗi 2 ph�
 // CONFIG: AUTH_API_URL tự động dùng chung URL với API_URL (cùng 1 Apps Script)
 // ============================================================
 // Không cần đổi dòng này — tự lấy từ API_URL ở trên
-var AUTH_API_URL = API_URL;
+const AUTH_API_URL = API_URL;
 // Tài khoản dự phòng LOCAL (dùng khi GAS không kết nối được)
 // Mật khẩu này PHẢI KHỚP với cột password trong tab Users của Google Sheet
-var LOCAL_FALLBACK_USER = 'admin';
-var LOCAL_FALLBACK_PASS = 'Admin2025';   // ← Khớp với DEFAULT_USERS trong Code.gs
+const LOCAL_FALLBACK_USER = 'admin';
+const LOCAL_FALLBACK_PASS = 'Admin@2025';   // ← Khớp với DEFAULT_USERS trong Code.gs
 
-var SESSION_KEY  = 'nttt_session';
-var REMEMBER_KEY = 'nttt_remember';
+const SESSION_KEY  = 'nttt_session';
+const REMEMBER_KEY = 'nttt_remember';
 
 // ---- Kiểm tra session khi tải trang ----
 (function initAuth() {
@@ -3035,6 +2764,61 @@ function doLogout() {
          oninput="filterQuoteDDFixed(this.value)"
          onkeydown="if(event.key==='Escape')closeQuoteDDFixed()">
   <div class="qdd-list" id="quoteDDList"></div>
+</div>
+
+<!-- MODAL SỬA SẢN PHẨM TRONG BÁO GIÁ ĐÃ LƯU -->
+<div class="edit-quote-modal" id="editQuoteModal">
+  <div class="edit-quote-box">
+    <h3 id="editModalTitle">✏️ Sửa báo giá</h3>
+
+    <!-- Thông tin khách -->
+    <div class="eq-field-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="eq-field"><label>Tên khách</label><input type="text" id="eq-cust-name" placeholder="Tên khách hàng"></div>
+      <div class="eq-field"><label>Điện thoại</label><input type="text" id="eq-cust-phone" placeholder="SĐT"></div>
+      <div class="eq-field"><label>Địa chỉ</label><input type="text" id="eq-cust-addr" placeholder="Địa chỉ"></div>
+    </div>
+
+    <!-- Danh sách sản phẩm — bấm để chọn và sửa -->
+    <div class="section-title" style="margin-bottom:8px;">Bấm vào sản phẩm để sửa thông số</div>
+    <div style="overflow-x:auto;margin-bottom:14px;">
+      <table class="eq-table" id="eqProductList">
+        <thead><tr><th>#</th><th>Tên sản phẩm</th><th>Dài×Cao</th><th>SL</th><th>Giá bán/m²</th><th>Thành tiền</th></tr></thead>
+        <tbody id="eqProductBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Form sửa sản phẩm đã chọn -->
+    <div id="eqEditForm" style="display:none;background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div class="section-title" style="margin-bottom:10px;" id="eqEditFormTitle">Sửa thông số</div>
+      <div class="eq-field-row">
+        <div class="eq-field"><label>Chiều dài (m)</label><input type="number" id="eq-w" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Chiều cao (m)</label><input type="number" id="eq-h" step="0.01" placeholder="0.00" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Số lượng</label><input type="number" id="eq-qty" value="1" min="1" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Giá bán / m² (đ)</label><input type="number" id="eq-sell" placeholder="0" oninput="eqCalc()"></div>
+      </div>
+      <div class="eq-field-row">
+        <div class="eq-field"><label>VC về kho (đ)</label><input type="number" id="eq-shipIn" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>VC cho khách (đ)</label><input type="number" id="eq-shipOut" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="number" id="eq-install" value="0" oninput="eqCalc()"></div>
+        <div class="eq-field"><label>Chi phí khác (đ)</label><input type="number" id="eq-other" value="0" oninput="eqCalc()"></div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap;">
+        <span>Diện tích: <strong id="eq-area-show">0</strong> m²</span>
+        <span>Thành tiền: <strong id="eq-total-show" style="color:var(--green)">0đ</strong></span>
+        <span>Lợi nhuận: <strong id="eq-profit-show">0đ</strong></span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-primary btn-sm" onclick="eqSaveItem()">✅ Lưu thay đổi dòng này</button>
+        <button class="btn btn-danger btn-sm" onclick="eqDeleteItem()">🗑 Xóa dòng này</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('eqEditForm').style.display='none'">✕ Đóng</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="eqSaveAll()">💾 Lưu tất cả thay đổi</button>
+    </div>
+  </div>
 </div>
 
 </body>
