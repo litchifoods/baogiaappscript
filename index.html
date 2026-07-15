@@ -898,42 +898,7 @@
     </div>
 
     <!-- Danh sách sản phẩm — bấm để chọn và sửa -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div class="section-title" style="margin:0;">Bấm vào sản phẩm để sửa thông số</div>
-      <button class="btn btn-primary btn-sm" onclick="eqToggleAddForm()">➕ Thêm sản phẩm</button>
-    </div>
-
-    <!-- Form thêm sản phẩm mới -->
-    <div id="eqAddForm" style="display:none;background:var(--green-soft);border:1px solid #A8D5B5;border-radius:10px;padding:14px;margin-bottom:12px;">
-      <div class="section-title" style="margin-bottom:10px;color:var(--green);">➕ Thêm sản phẩm mới vào báo giá</div>
-      <div class="eq-field" style="margin-bottom:10px;position:relative;">
-        <label>Tìm sản phẩm</label>
-        <input type="text" id="eq-add-search" placeholder="Gõ tên sản phẩm..." oninput="eqFilterSP(this.value)" autocomplete="off"
-          style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:13px;font-family:inherit;background:#fff;">
-        <div id="eq-add-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--green);border-radius:10px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:200px;overflow-y:auto;"></div>
-        <div id="eq-add-sel" style="display:none;margin-top:4px;font-size:12px;font-weight:600;color:var(--green);padding:5px 10px;background:#fff;border-radius:6px;border:1px solid #A8D5B5;"></div>
-      </div>
-      <div class="eq-field-row">
-        <div class="eq-field"><label>Dài (m)</label><input type="number" id="eq-add-w" step="0.01" placeholder="0.00" oninput="eqAddCalc()"></div>
-        <div class="eq-field"><label>Cao (m)</label><input type="number" id="eq-add-h" step="0.01" placeholder="0.00" oninput="eqAddCalc()"></div>
-        <div class="eq-field"><label>Số lượng</label><input type="number" id="eq-add-qty" value="1" min="1" oninput="eqAddCalc()"></div>
-        <div class="eq-field"><label>Giá bán/m² (đ)</label><input type="number" id="eq-add-sell" placeholder="0" oninput="eqAddCalc()"></div>
-      </div>
-      <div class="eq-field-row">
-        <div class="eq-field"><label>VC kho (đ)</label><input type="number" id="eq-add-si" value="0" oninput="eqAddCalc()"></div>
-        <div class="eq-field"><label>VC khách (đ)</label><input type="number" id="eq-add-so" value="0" oninput="eqAddCalc()"></div>
-        <div class="eq-field"><label>Lắp đặt (đ)</label><input type="number" id="eq-add-ins" value="0" oninput="eqAddCalc()"></div>
-        <div class="eq-field"><label>CP khác (đ)</label><input type="number" id="eq-add-oth" value="0" oninput="eqAddCalc()"></div>
-      </div>
-      <div style="font-size:13px;padding:8px 10px;background:#fff;border-radius:8px;margin-bottom:10px;display:flex;gap:16px;flex-wrap:wrap;">
-        <span>DT: <strong id="eq-add-area">0</strong> m²</span>
-        <span>Thành tiền: <strong id="eq-add-total" style="color:var(--green)">0đ</strong></span>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-primary" onclick="eqDoAddProduct()">✅ Thêm vào báo giá</button>
-        <button class="btn btn-secondary" onclick="eqToggleAddForm()">✕ Đóng</button>
-      </div>
-    </div>
+    <div class="section-title" style="margin-bottom:8px;">Bấm vào sản phẩm để sửa thông số</div>
     <div style="overflow-x:auto;margin-bottom:14px;">
       <table class="eq-table" id="eqProductList">
         <thead><tr><th>#</th><th>Tên sản phẩm</th><th>Dài×Cao</th><th>SL</th><th>Giá bán/m²</th><th>Thành tiền</th></tr></thead>
@@ -2731,100 +2696,6 @@ function eqDeleteItem() {
   renderEqProducts();
   document.getElementById('eqEditForm').style.display = 'none';
 }
-
-var _eqAddSP = null;
-
-function eqToggleAddForm() {
-  var f = document.getElementById('eqAddForm');
-  var show = f.style.display === 'none';
-  f.style.display = show ? 'block' : 'none';
-  if (show) {
-    _eqAddSP = null;
-    ['eq-add-search','eq-add-w','eq-add-h','eq-add-sell'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-    ['eq-add-qty'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=1; });
-    ['eq-add-si','eq-add-so','eq-add-ins','eq-add-oth'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=0; });
-    document.getElementById('eq-add-dd').style.display='none';
-    document.getElementById('eq-add-sel').style.display='none';
-    document.getElementById('eq-add-area').textContent='0';
-    document.getElementById('eq-add-total').textContent='0đ';
-    setTimeout(function(){ document.getElementById('eq-add-search').focus(); }, 50);
-  }
-}
-
-function eqFilterSP(q) {
-  var dd = document.getElementById('eq-add-dd');
-  if (!q) { dd.style.display='none'; return; }
-  var list = typeof smartFilter==='function' ? smartFilter(PRODUCTS,q) : PRODUCTS.filter(function(p){ return p.name.toLowerCase().includes(q.toLowerCase()); });
-  if (!list.length) { dd.style.display='none'; return; }
-  dd.style.display = 'block';
-  dd.innerHTML = list.slice(0,12).map(function(p) {
-    var idx = PRODUCTS.indexOf(p);
-    return '<div onclick="eqPickSP('+idx+')" style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;" onmouseover="this.style.background='#ECF4EF'" onmouseout="this.style.background=''">'
-      + '<span>'+p.name+'</span>'
-      + '<span style="font-size:11px;color:#6B6358">'+Math.round(p.price).toLocaleString('vi-VN')+'đ/m²</span>'
-      + '</div>';
-  }).join('');
-}
-
-function eqPickSP(idx) {
-  var p = PRODUCTS[idx];
-  _eqAddSP = p;
-  document.getElementById('eq-add-search').value = p.name;
-  document.getElementById('eq-add-dd').style.display = 'none';
-  var sel = document.getElementById('eq-add-sel');
-  sel.style.display = 'block';
-  sel.textContent = '✅ ' + p.name + ' — Giá nhập: ' + Math.round(p.price).toLocaleString('vi-VN') + 'đ/m²';
-  document.getElementById('eq-add-w').focus();
-}
-
-function eqAddCalc() {
-  var w    = parseFloat(document.getElementById('eq-add-w').value)    || 0;
-  var h    = parseFloat(document.getElementById('eq-add-h').value)    || 0;
-  var qty  = parseInt(document.getElementById('eq-add-qty').value)    || 1;
-  var sell = parseFloat(document.getElementById('eq-add-sell').value) || 0;
-  var area  = w * h;
-  var total = sell * area * qty;
-  document.getElementById('eq-add-area').textContent  = area.toFixed(2);
-  document.getElementById('eq-add-total').textContent = Math.round(total).toLocaleString('vi-VN') + 'đ';
-}
-
-function eqDoAddProduct() {
-  if (!_eqAddSP) { alert('Vui lòng chọn sản phẩm!'); return; }
-  var w   = parseFloat(document.getElementById('eq-add-w').value)    || 0;
-  var h   = parseFloat(document.getElementById('eq-add-h').value)    || 0;
-  var qty = parseInt(document.getElementById('eq-add-qty').value)    || 1;
-  var sell= parseFloat(document.getElementById('eq-add-sell').value) || 0;
-  var si  = parseFloat(document.getElementById('eq-add-si').value)   || 0;
-  var so  = parseFloat(document.getElementById('eq-add-so').value)   || 0;
-  var ins = parseFloat(document.getElementById('eq-add-ins').value)  || 0;
-  var oth = parseFloat(document.getElementById('eq-add-oth').value)  || 0;
-  if (!w || !h) { alert('Vui lòng nhập kích thước!'); return; }
-  var area   = w * h;
-  var imp    = Math.round(_eqAddSP.price);
-  var extra  = si + so + ins + oth;
-  var cost   = imp * area * qty + extra;
-  var rev    = sell * area * qty;
-  var profit = rev - cost;
-  var margin = rev > 0 ? profit/rev*100 : 0;
-  _editItems.push({
-    name: _eqAddSP.name, mat: _eqAddSP.mat || '',
-    w: w, h: h, qty: qty, area: area,
-    importPrice: imp, sellPrice: sell,
-    shipIn: si, shipOut: so, install: ins, other: oth,
-    extraCost: extra, totalCost: cost,
-    rev: rev, profit: profit, margin: margin
-  });
-  renderEqProducts();
-  eqToggleAddForm();
-}
-
-// Đóng dropdown khi click ra ngoài
-document.addEventListener('click', function(e) {
-  if (!e.target.closest || (!e.target.closest('#eq-add-search') && !e.target.closest('#eq-add-dd'))) {
-    var dd = document.getElementById('eq-add-dd');
-    if (dd) dd.style.display = 'none';
-  }
-});
 
 function eqSaveAll() {
   if (_editModalIdx === null) return;
